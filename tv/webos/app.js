@@ -6,7 +6,7 @@
   'use strict';
 
   // TV uygulamasının sürümü: appinfo.json, tv-tizen/config.xml ve tv-android/app/build.gradle ile aynı tutulur.
-  var APP_VERSION = '1.0.0';
+  var APP_VERSION = '1.0.2';
   var t = window.t;
   var config = window.GAMETRANSLATOR_CONFIG || window.GAMETRANSLATOR_CONFIG || {};
   var platform = window.GAMETRANSLATOR_PLATFORM || window.GAMETRANSLATOR_PLATFORM;
@@ -25,6 +25,14 @@
   var placement = 'fixed';
   // Gösterilen satırın oyundaki İngilizce altyazının yeri (ekrana oranla), bilinmiyorsa null.
   var currentBox = null;
+  // Oyunun altyazısının gerçek yeri (örtme yerleşiminde çeviri buraya sığdırılır), ayarlardaki yazı boyu ve
+  // yazının şu an sığdırılmış olup olmadığı.
+  var currentSource = null;
+  var baseFontSize = 0;
+  var fitted = false;
+  // Oyunun altyazısının satır yüksekliği (ekran yüksekliğine oranla); bilinmiyorsa 0.
+  var currentLine = 0;
+  var coverBackground = '';
 
   // Önceki satır bu süreden kısa göründüyse okunamamış olabilir; yeni satırın üstünde bir süre daha kalır.
   var PREVIOUS_HOLD_MS = 2500;
@@ -159,7 +167,10 @@
   }
 
   // paragraphs: görev paneli gibi başlık ve maddeli yazılar satır satır, sola yaslı gösterilir.
-  function showSubtitle(text, duration, box, paragraphs) {
+  function showSubtitle(text, duration, box, paragraphs, source, line) {
+    // source: oyunun altyazısının gerçek yeri (örtme yerleşiminde çeviri tam bu alana sığdırılır).
+    currentSource = paragraphs ? null : validBox(source);
+    currentLine = typeof line === 'number' && line > 0 ? line : 0;
     // Önceki satır artık ayrıca gösterilmez: iki kutu üst üste binmiş gibi görünüyor, aynı cümlenin iki okunuşu
     // da ikinci çeviri gibi duruyordu. Yeni satır eskisinin yerine geçer.
     hidePrevious();
@@ -294,6 +305,7 @@
     el.style.transform = 'none';
     el.style.webkitTransform = 'none';
     cover.className = 'hidden';
+    unfit();
 
     // Altyazı yokken veya kutu tanımlı değilken örtü tek başına kalmasın
     if (!box || el.className === 'hidden') return;
@@ -303,7 +315,9 @@
     if (mode === 'below' && box.bottom > 0.88) mode = 'above';
     if (mode === 'above' && box.top < 0.12) mode = 'below';
 
-    if (mode === 'cover') {
+    if (mode === 'cover' && currentSource) {
+      fitToSource(el, cover, currentSource);
+    } else if (mode === 'cover') {
       // İngilizce altyazının tam üstünü örten koyu zemin
       var padX = 0.02; // Yatayda %2 pay
       var padY = 0.015; // Dikeyde %1.5 pay
@@ -343,6 +357,87 @@
     }
   }
 
+  // Çeviriyi oyunun altyazısının kapladığı alana sığdırır: aynı genişlikte sarılır, yazı boyu alana sığan en büyük
+  // boydur (ayarlardaki boyun 0,6–1,6 katı arasında). Böylece çeviri oyunun altyazısıyla aynı yerde, aynı satır
+  // düzeninde ve hemen hemen aynı boyda durur; zemin tek parçadır. En küçük boyda da sığmıyorsa zemin yazıya göre büyür.
+  function fitToSource(el, cover, box) {
+    var padX = 0.008, padY = 0.006;
+    var left = Math.max(0, box.left - padX), right = Math.min(1, box.right + padX);
+    var top = Math.max(0, box.top - padY), bottom = Math.min(1, box.bottom + padY);
+    // Çok dar altyazıda (tek sözcük) çeviri en az bu kadar yer bulur.
+    var minWidth = 0.16;
+    if (right - left < minWidth) {
+      var center = (left + right) / 2;
+      left = Math.max(0, center - minWidth / 2);
+      right = Math.min(1, center + minWidth / 2);
+    }
+    // Zemin önce oyunun altyazısının yerine konur; ölçüler ondan alınır (yüzde ve piksel karışmasın).
+    var place = function (l, t, r, b) {
+      cover.style.left = (l * 100).toFixed(3) + '%';
+      cover.style.top = (t * 100).toFixed(3) + '%';
+      cover.style.width = ((r - l) * 100).toFixed(3) + '%';
+      cover.style.height = ((b - t) * 100).toFixed(3) + '%';
+    };
+    place(left, top, right, bottom);
+    // Oyunun altyazısı alttan hiç görünmesin: zemin tam opaktır.
+    if (!fitted) coverBackground = cover.style.background;
+    cover.style.background = 'rgb(10, 10, 12)';
+    cover.className = '';
+    var area = cover.getBoundingClientRect();
+    var perX = area.width / (right - left), perY = area.height / (bottom - top);
+
+    var text = $('subtitle-text');
+    el.style.left = (left * 100).toFixed(3) + '%';
+    el.style.right = ((1 - right) * 100).toFixed(3) + '%';
+    el.style.bottom = 'auto';
+    el.style.top = (((top + bottom) / 2) * 100).toFixed(3) + '%';
+    el.style.transform = 'translateY(-50%)';
+    el.style.webkitTransform = 'translateY(-50%)';
+    text.style.padding = '0 6px';
+    text.style.lineHeight = '1.2';
+
+    // En büyük boy oyunun altyazısının boyudur (satır yüksekliği biliniyorsa); bilinmiyorsa ayarlardaki boy.
+    var base = baseFontSize || 46;
+    var low = Math.max(16, Math.round(base * 0.55));
+    var high = currentLine > 0 ? Math.round(currentLine * perY * 1.05) : Math.round(base * 1.15);
+    high = Math.max(low, Math.min(Math.round(base * 1.6), high));
+    var fits = function (size) {
+      text.style.fontSize = size + 'px';
+      var rect = text.getBoundingClientRect();
+      return rect.width <= area.width + 1 && rect.height <= area.height + 1;
+    };
+    var best = low;
+    if (fits(high)) best = high;
+    else if (fits(low)) {
+      var a = low, b = high;
+      while (b - a > 1) {
+        var mid = Math.floor((a + b) / 2);
+        if (fits(mid)) a = mid; else b = mid;
+      }
+      best = a;
+    }
+    text.style.fontSize = best + 'px';
+
+    // Yazı en küçük boyda da taşıyorsa zemin onu da içine alacak kadar büyür (tek parça kalır).
+    var rect = text.getBoundingClientRect();
+    var growTop = Math.max(0, area.top - rect.top + 2) / perY, growBottom = Math.max(0, rect.bottom - area.bottom + 2) / perY;
+    var growLeft = Math.max(0, area.left - rect.left + 2) / perX, growRight = Math.max(0, rect.right - area.right + 2) / perX;
+    if (growTop || growBottom || growLeft || growRight)
+      place(Math.max(0, left - growLeft), Math.max(0, top - growTop), Math.min(1, right + growRight), Math.min(1, bottom + growBottom));
+    fitted = true;
+  }
+
+  // Sığdırma yerleşiminden çıkınca yazının ayarlardaki boyu ve boşlukları geri gelir.
+  function unfit() {
+    if (!fitted) return;
+    fitted = false;
+    var text = $('subtitle-text');
+    $('subtitle-cover').style.background = coverBackground;
+    text.style.padding = '';
+    text.style.lineHeight = '';
+    if (baseFontSize) text.style.fontSize = baseFontSize + 'px';
+  }
+
   // Bazı TV'lerde sabit konumun ekran dışına taşmasını engeller.
   function keepOnScreen(el, cover) {
     if (placement === 'fixed') {
@@ -353,6 +448,7 @@
 
   function applyStyle(style) {
     if (style.fontSize) {
+      baseFontSize = style.fontSize;
       $('subtitle-text').style.fontSize = style.fontSize + 'px';
       $('subtitle-prev-text').style.fontSize = Math.round(style.fontSize * 0.8) + 'px';
     }
@@ -443,7 +539,7 @@
     onEvent('subtitle', function (data) {
       diag.subtitles++;
       renderDiag();
-      if (data.text) showSubtitle(data.text, data.duration, data.box, data.paragraphs === true);
+      if (data.text) showSubtitle(data.text, data.duration, data.box, data.paragraphs === true, data.source, data.line);
     });
     onEvent('clear', onClear);
     onEvent('screen', function (data) { showScreen(data.items, data.duration); });
