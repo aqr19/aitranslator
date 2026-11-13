@@ -38,6 +38,11 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
     /// okumayı beklemek için sonuna kadar tutulur; paketi olmayan oyunda aynen yinelenen okumayı bekletmek yalnız gecikmedir.
     /// </summary>
     public int SettledRelease { get; set; }
+    /// <summary>
+    /// Açıkken ayrı satırdaki konuşmacı adı söze eklenir (<see cref="Reading.WithSpeakerLine"/>) ve yalnız başlık gibi
+    /// satırlardan oluşan okuma atılır (<see cref="Reading.WithoutHeadings"/>). Uygulama açar.
+    /// </summary>
+    public bool TidySpeakersAndHeadings { get; set; }
     public int CleanWait { get; set; } = CleanWaitMs;
     /// <summary>Okuma bozuk mu (bekletilecek mi); uygulama yazım denetimiyle daha iyisini verebilir.</summary>
     public Func<string, bool> LooksMisread { get; set; } = text => PackFuzzy.Damaged(text) || (ExtraMisreadCheck?.Invoke(text) ?? false);
@@ -202,6 +207,8 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
         // Alandaki menü ve köşe göstergeleri de altyazı değildir; yalnız altyazı bloğu çevrilir ve kutusu ona göre olur.
         var area = new TextBox(region.Left, region.Top, region.Right, region.Bottom);
         var reading = raw.WithoutButtonPrompts().WithoutOcrNoise().SubtitleBlock(area);
+        // Ayrı satırdaki konuşmacı adı söze eklenir; yalnız başlık ve ekran yazısından oluşan okuma çevrilmez.
+        if (TidySpeakersAndHeadings) reading = reading.WithSpeakerLine().WithoutHeadings();
 
         Action? after = null;
         Action? flushed = null;

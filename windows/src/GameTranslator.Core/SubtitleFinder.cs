@@ -25,7 +25,7 @@ public sealed class SubtitleFinder
     /// <summary>Aynı yerde aynı yazı bu kadar süre kalırsa arayüzdür.</summary>
     public const int StaticAfterMs = 9000;
     /// <summary>Şerit bu kadar süre boşken başka yerde altyazıya benzer satırlar birikirse şerit yeniden öğrenilir.</summary>
-    public const int RelearnAfterMs = 20000;
+    public const int RelearnAfterMs = 10000;
     /// <summary>Satırın ortası ekranın ortasından en çok bu kadar uzak olabilir.</summary>
     public const double CenterTolerance = 0.12;
 

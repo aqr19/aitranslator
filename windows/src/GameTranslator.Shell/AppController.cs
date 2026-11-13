@@ -992,6 +992,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         built.PackWait = 450;
         // Aynı okuma yinelenirse (yazı tanıma satırı hep böyle okuyor) beklemenin kalanı atlanır.
         built.SettledRelease = SubtitlePipeline.SettledAfterMs;
+        built.TidySpeakersAndHeadings = true;
         // Altyazı günlüğü (altyazi.log): okunan satırlar ve akıbetleri; gösterilen çevirinin kendisi de yazılır.
         built.Log = SubtitleLog.Write;
         built.PairShown += (source, translation) =>

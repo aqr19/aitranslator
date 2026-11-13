@@ -114,6 +114,54 @@ public sealed class Reading
         return candidates.Where(reading => WordCount(reading.Text) >= 3).MaxBy(reading => reading.Box!.Value.Bottom) ?? Empty;
     }
 
+    /// <summary>
+    /// Bazı oyunlar konuşmacı adını sözün üstünde ayrı bir satırda, büyük harflerle ve iki noktasız gösterir
+    /// ("MARKOS" / "We have no option but to try!"). Ad ilk söz satırının başına "MARKOS: …" olarak taşınır; böylece
+    /// adı satır içinde gösteren oyunlarla aynı biçim olur (ad cümlenin öznesi sanılmaz, bölünen cümleler birleşir).
+    /// </summary>
+    public Reading WithSpeakerLine()
+    {
+        if (Lines.Count < 2 || !IsSpeakerLine(Lines[0].Text) || IsHeading(Lines[1].Text)) return this;
+        var (name, first) = (Lines[0], Lines[1]);
+        var box = name.Box is { } a && first.Box is { } b ? a.Union(b) : first.Box ?? name.Box;
+        return new Reading([first with { Text = $"{name.Text.Trim()}: {first.Text.Trim()}", Box = box }, .. Lines.Skip(2)]);
+    }
+
+    /// <summary>En çok üç sözcüklü, tümü büyük harf, noktalamasız satır: konuşmacı adı ("MARKOS", "YOUNG ALEXIOS").</summary>
+    internal static bool IsSpeakerLine(string text)
+    {
+        var trimmed = text.Trim();
+        var letters = trimmed.Where(char.IsLetter).ToList();
+        return letters.Count >= 2 && letters.All(char.IsUpper) && WordCount(trimmed) <= 3 &&
+               trimmed.All(c => char.IsLetter(c) || c is ' ' or '-' or '.' or '\'' or '’');
+    }
+
+    /// <summary>
+    /// Başlık, menü ya da ekran yazısı gibi duran satırlardan oluşan okuma boş sayılır ("Engraving Challenges",
+    /// "SORT BY: CATEGORY", "LEVEL 2", tek başına konuşmacı adı). Konuşma içeren okumaya dokunulmaz.
+    /// </summary>
+    public Reading WithoutHeadings() => Lines.Count > 0 && Lines.All(line => IsHeading(line.Text)) ? Empty : this;
+
+    private static readonly HashSet<string> SmallWords = new(StringComparer.OrdinalIgnoreCase)
+        { "a", "an", "the", "of", "and", "or", "to", "in", "on", "for", "by", "at", "with", "&" };
+
+    /// <summary>
+    /// Cümle gibi bitmeyen, virgülsüz, en çok beş sözcüklü ve ya tümü büyük harf ya da her sözcüğü büyük harfle başlayan
+    /// satır ("Gear Visual Customization", "ACHAIA"). "Thank you" ya da "Hold the gate" başlık değildir.
+    /// </summary>
+    internal static bool IsHeading(string text)
+    {
+        var trimmed = text.Trim();
+        if (trimmed.Length == 0) return true;
+        if (SubtitleStabilizer.EndsSentence(trimmed) || trimmed.Contains(',') || trimmed.EndsWith("--", StringComparison.Ordinal)) return false;
+        var words = trimmed.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Where(word => word.Any(char.IsLetter)).ToList();
+        if (words.Count is 0 or > 5) return words.Count == 0;
+        var letters = trimmed.Where(char.IsLetter).ToList();
+        if (letters.All(char.IsUpper)) return true;
+        if (words.Count < 2) return false;
+        return words.All(word => SmallWords.Contains(word) || char.IsUpper(word.First(char.IsLetter)));
+    }
+
     /// <summary>Bloğun son satırının hemen altında ve yatayda onunla üst üste binen satır o bloğa aittir.</summary>
     private static bool Belongs(TextBox box, List<TextLine> block, TextBox area)
     {
