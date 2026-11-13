@@ -6,9 +6,10 @@ namespace GameTranslator.Core;
 /// Altyazıyı ekranın tamamından, kullanıcı alan seçmeden bulur. Yazının yerine değil davranışına bakar: altyazı
 /// ortalıdır, cümle gibidir, birkaç saniyede bir değişir ve hep aynı şeritte çıkar; arayüz yazısı (görev hedefi,
 /// gösterge) uzun süre aynı yerde aynı kalır, menü kısa ve noktalamasız satırlardır, kumanda ipucu düğme adı taşır.
-/// İlk birkaç altyazıdan oyunun altyazı şeridi öğrenilir; sonra şerit dışındaki cümleler (ekran ortasındaki eğitim
-/// ipucu, bildirim) altyazı sayılmaz. Şerit uzun süre boş kalır ve başka yerde altyazıya benzer satırlar birikirse
-/// yeniden öğrenilir (oyun ya da sahne değişti).
+/// Şerit, son bir buçuk dakikada görülen açıkça konuşma olan satırların en çok toplandığı yerdir. Konuşmacısı belli
+/// satırlar ("Ad: söz" ya da üstünde büyük harfli ad satırı) üç kat sayılır: diyalogda konuşmacı olur, yükleme
+/// ekranındaki ipuçlarında ve eğitim yazılarında olmaz. Şerit, başka bir yer belirgin biçimde ağır basınca değişir;
+/// konuşmacılı satırlarla kurulmuş şeridi yalnız konuşmacılı satırlar yerinden eder (ipuçları eder).
 /// Kutular karenin tamamına oranladır (0–1). Durum tutar; tek iş parçacığından çağrılır.
 /// </summary>
 public sealed class SubtitleFinder
@@ -20,21 +21,28 @@ public sealed class SubtitleFinder
     /// <summary>Öğrenilen altyazı şeridi (karenin yüksekliğine oranla); henüz öğrenilmediyse null.</summary>
     public (double Top, double Bottom)? Band { get; private set; }
 
-    /// <summary>Şeridi öğrenmek için gereken farklı altyazı sayısı.</summary>
-    public const int LinesToLearn = 3;
+    /// <summary>Şeridin kurulması için gereken kanıt ağırlığı (düz satır 1, konuşmacılı satır <see cref="SpeakerWeight"/>).</summary>
+    public const int WeightToLearn = 4;
+    /// <summary>Konuşmacısı belli satırın ağırlığı.</summary>
+    public const int SpeakerWeight = 3;
+    /// <summary>Başka bir yerin şeridi yerinden etmesi için şeritteki kanıttan bu kadar ağır basması gerekir.</summary>
+    public const int WeightToMove = 3;
+    /// <summary>Kanıt bu kadar süre geçerlidir.</summary>
+    public const int EvidenceMs = 90000;
     /// <summary>Aynı yerde aynı yazı bu kadar süre kalırsa arayüzdür.</summary>
     public const int StaticAfterMs = 9000;
-    /// <summary>Şerit bu kadar süre boşken başka yerde altyazıya benzer satırlar birikirse şerit yeniden öğrenilir.</summary>
-    public const int RelearnAfterMs = 10000;
     /// <summary>Satırın ortası ekranın ortasından en çok bu kadar uzak olabilir.</summary>
     public const double CenterTolerance = 0.12;
+    /// <summary>Ortaları birbirine bu kadar yakın satırlar aynı yerdedir (iki satırlı altyazının iki satırı).</summary>
+    private const double SamePlace = 0.05;
 
     private sealed record Seen(long First, long Last);
+    private sealed record Evidence(double Middle, double Height, string Text, long At, int Weight);
 
     private readonly Dictionary<string, Seen> seen = [];
-    private readonly List<(double Middle, double Height, string Text)> votes = [];
-    private readonly List<(double Middle, double Height, string Text, long At)> strays = [];
-    private long lastInBand;
+    private readonly List<Evidence> evidence = [];
+    /// <summary>Şerit konuşmacılı satırlarla mı kuruldu (öyleyse yalnız konuşmacılı satırlar yerinden eder).</summary>
+    private bool bandHasSpeakers;
 
     /// <summary>Karenin tamamının okumasını sınıflar. <paramref name="now"/> milisaniyedir (tekdüze artan saat).</summary>
     public IReadOnlyList<Finding> Classify(Reading reading, long now)
@@ -58,13 +66,19 @@ public sealed class SubtitleFinder
             else verdict = InBand(box) ? Verdict.Subtitle : Verdict.OutsideBand;
 
             // Şeridi yalnız açıkça konuşma olan satırlar belirler; "Spider Barrage" gibi kısa yazılar belirlemez.
-            if (verdict == Verdict.Subtitle)
+            if (verdict is Verdict.Subtitle or Verdict.OutsideBand)
             {
-                lastInBand = now;
-                if (IsClearlySpoken(line.Text)) Vote(line.Text, box, now);
+                var speaker = HasSpeaker(line, reading);
+                if (speaker || IsClearlySpoken(line.Text)) Note(line.Text, box, now, speaker ? SpeakerWeight : 1);
             }
-            else if (verdict == Verdict.OutsideBand && IsClearlySpoken(line.Text)) Stray(line.Text, box, now);
             findings.Add(new Finding(line, verdict));
+        }
+        if (Relearn(now))
+        {
+            // Şerit değişti: bu karedeki satırlar yeni şeride göre yeniden değerlendirilir.
+            for (var i = 0; i < findings.Count; i++)
+                if (findings[i].Verdict is Verdict.Subtitle or Verdict.OutsideBand && findings[i].Line.Box is { } box)
+                    findings[i] = findings[i] with { Verdict = InBand(box) ? Verdict.Subtitle : Verdict.OutsideBand };
         }
         return findings;
     }
@@ -80,31 +94,69 @@ public sealed class SubtitleFinder
         return middle >= band.Top && middle <= band.Bottom;
     }
 
-    /// <summary>Şerit öğrenilene kadar oylar birikir; öğrenildikten sonra şeritteki satırlar şeridi ince ayarlar.</summary>
-    private void Vote(string text, TextBox box, long now)
+    /// <summary>
+    /// Satırın konuşmacısı belli mi: "Ad: söz" biçiminde başlar ya da hemen üstünde, ortalı, büyük harfli kısa bir ad
+    /// satırı vardır ("MARKOS" / "We have no option but to try!").
+    /// </summary>
+    private static bool HasSpeaker(TextLine line, Reading reading)
     {
-        var normal = TextMatch.Normalize(text);
-        if (votes.Any(vote => vote.Text == normal)) return;
-        votes.Add(((box.Top + box.Bottom) / 2, box.Bottom - box.Top, normal));
-        if (votes.Count > 12) votes.RemoveAt(0);
-        if (votes.Count >= LinesToLearn) Band = BandOf(votes.Select(vote => (vote.Middle, vote.Height)).ToList());
+        var text = line.Text.TrimStart();
+        var colon = text.IndexOf(": ", StringComparison.Ordinal);
+        if (colon is >= 2 and <= 30 && char.IsUpper(text[0]) && text[..colon].Split(' ').Length <= 3 &&
+            text[..colon].All(c => char.IsLetter(c) || c is ' ' or '-' or '.' or '\'' or '’'))
+            return true;
+        if (line.Box is not { } box) return false;
+        var height = box.Bottom - box.Top;
+        return reading.Lines.Any(other => other.Box is { } above && Reading.IsSpeakerLine(other.Text) &&
+            above.Bottom <= box.Top + (height * 0.5) && box.Top - above.Bottom <= height * 1.5 &&
+            Math.Abs(((above.Left + above.Right) / 2) - ((box.Left + box.Right) / 2)) <= CenterTolerance);
     }
 
-    /// <summary>Şerit dışındaki altyazıya benzer satırlar: şerit uzun süredir boşsa ve bunlar bir yerde toplanıyorsa yeni şerittir.</summary>
-    private void Stray(string text, TextBox box, long now)
+    private void Note(string text, TextBox box, long now, int weight)
     {
         var normal = TextMatch.Normalize(text);
-        if (strays.Any(stray => stray.Text == normal)) return;
-        strays.Add(((box.Top + box.Bottom) / 2, box.Bottom - box.Top, normal, now));
-        strays.RemoveAll(stray => now - stray.At > RelearnAfterMs * 2);
-        if (now - lastInBand < RelearnAfterMs || strays.Count < LinesToLearn) return;
-        var candidate = BandOf(strays.Select(stray => (stray.Middle, stray.Height)).ToList());
-        if (strays.Count(stray => stray.Middle >= candidate.Top && stray.Middle <= candidate.Bottom) < LinesToLearn) return;
-        Band = candidate;
-        votes.Clear();
-        votes.AddRange(strays.Select(stray => (stray.Middle, stray.Height, stray.Text)));
-        strays.Clear();
-        lastInBand = now;
+        var known = evidence.FindIndex(item => item.Text == normal);
+        // Aynı satır yeniden görülünce tarihi yenilenir; ağırlığı artmaz (ekranda duran yazı şeridi çekmesin).
+        if (known >= 0) evidence[known] = evidence[known] with { At = now, Weight = Math.Max(evidence[known].Weight, weight) };
+        else evidence.Add(new Evidence((box.Top + box.Bottom) / 2, box.Bottom - box.Top, normal, now, weight));
+        if (evidence.Count > 40) evidence.RemoveAt(0);
+    }
+
+    /// <summary>Kanıtın en çok toplandığı yeri bulur; şerit yoksa kurar, başka yer ağır basıyorsa oraya taşır. Değiştiyse true.</summary>
+    private bool Relearn(long now)
+    {
+        evidence.RemoveAll(item => now - item.At > EvidenceMs);
+        if (evidence.Count == 0) return false;
+        List<Evidence> Around(double middle) => evidence.Where(item => Math.Abs(item.Middle - middle) <= SamePlace).ToList();
+        var best = evidence.Select(item => Around(item.Middle))
+            .OrderByDescending(cluster => cluster.Sum(item => item.Weight)).ThenByDescending(cluster => cluster.Max(item => item.At)).First();
+        var weight = best.Sum(item => item.Weight);
+        var speakers = best.Any(item => item.Weight >= SpeakerWeight);
+        var candidate = BandOf(best.Select(item => (item.Middle, item.Height)).ToList());
+
+        if (Band is not { } band)
+        {
+            if (weight < WeightToLearn) return false;
+            (Band, bandHasSpeakers) = (candidate, speakers);
+            return true;
+        }
+        var inBand = evidence.Where(item => item.Middle >= band.Top && item.Middle <= band.Bottom).ToList();
+        var center = Median(best.Select(item => item.Middle));
+        if (center >= band.Top && center <= band.Bottom)
+        {
+            // Aynı yer: şerit ince ayarlanır.
+            bandHasSpeakers |= speakers;
+            if (Math.Abs(candidate.Top - band.Top) < 0.005 && Math.Abs(candidate.Bottom - band.Bottom) < 0.005) return false;
+            Band = candidate;
+            return true;
+        }
+        // Başka yer: belirgin biçimde ağır basmalı; konuşmacılı şeridi konuşmacısız yazılar (ipuçları) yerinden etmez.
+        var stillSpeakers = bandHasSpeakers && inBand.Any(item => item.Weight >= SpeakerWeight);
+        // Konuşmacılı satırlar konuşmacısız bir şeridi (ipuçlarından öğrenilmiş) eşit ağırlıkta bile yerinden eder.
+        var margin = speakers && !stillSpeakers ? 0 : WeightToMove;
+        if (weight < inBand.Sum(item => item.Weight) + margin || (stillSpeakers && !speakers) || weight < WeightToLearn) return false;
+        (Band, bandHasSpeakers) = (candidate, speakers);
+        return true;
     }
 
     /// <summary>
