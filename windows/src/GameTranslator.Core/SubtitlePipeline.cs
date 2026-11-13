@@ -43,6 +43,10 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
     /// satırlardan oluşan okuma atılır (<see cref="Reading.WithoutHeadings"/>). Uygulama açar.
     /// </summary>
     public bool TidySpeakersAndHeadings { get; set; }
+    /// <summary>
+    /// Okunan alandaki satırlardan altyazı olanları seçen süzgeç (okuma, alanın karedeki yeri); null ise hepsi kalır.
+    /// </summary>
+    public Func<Reading, TextBox, Reading>? LineFilter { get; set; }
     /// <summary>Okuma çevrilemeyecek kadar bozuk mu (uygulama yazım denetimiyle verir); null ise hiçbir okuma atılmaz.</summary>
     public Func<string, bool>? IsGarbage { get; set; }
     public int CleanWait { get; set; } = CleanWaitMs;
@@ -212,7 +216,10 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
         // Yazı tanımanın uydurduğu sözcük çöpleri ("ou$3e") de çevirmene gitmez.
         // Alandaki menü ve köşe göstergeleri de altyazı değildir; yalnız altyazı bloğu çevrilir ve kutusu ona göre olur.
         var area = new TextBox(region.Left, region.Top, region.Right, region.Bottom);
-        var reading = raw.WithoutButtonPrompts().WithoutOcrNoise().SubtitleBlock(area);
+        var cleaned = raw.WithoutButtonPrompts().WithoutOcrNoise();
+        // Uygulama altyazı satırlarını kendisi seçebilir (otomatik algılama): okunan alan geniştir, satırlar süzülür.
+        if (LineFilter is { } filter) cleaned = filter(cleaned, area);
+        var reading = cleaned.SubtitleBlock(area);
         // Ayrı satırdaki konuşmacı adı söze eklenir; yalnız başlık ve ekran yazısından oluşan okuma çevrilmez.
         if (TidySpeakersAndHeadings) reading = reading.WithSpeakerLine().WithoutHeadings();
 

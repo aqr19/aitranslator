@@ -84,6 +84,51 @@ public sealed class SubtitleFinder
     }
 
     /// <summary>Altyazı sayılan satırlar, yukarıdan aşağı.</summary>
+    /// <summary>
+    /// Geniş bir alanın okumasından altyazı bloğunu seçer: şeridin içindeki satırlar çekirdektir; onlara dikeyde bitişik
+    /// ve yatayda hizalı satırlar da (altyazının üçüncü, dördüncü satırı, üstteki konuşmacı adı) bloğa katılır. Böylece
+    /// altyazı uzayınca alt satırı kesilmez, şeritten uzaktaki yazılar (ipucu, gösterge) ise dışarıda kalır.
+    /// Şeritte hiç satır yoksa okuma boştur. <paramref name="area"/> okunan alanın karedeki yeridir; satır kutuları
+    /// alana göredir ve öyle döner.
+    /// </summary>
+    public static Reading Grow(Reading reading, TextBox area, (double Top, double Bottom) band)
+    {
+        var lines = reading.Lines.Where(line => line.Box is not null).ToList();
+        if (lines.Count == 0) return reading;
+        TextBox Place(TextLine line) => line.Box!.Value.PlacedIn(area);
+        var kept = lines.Where(line =>
+        {
+            var box = Place(line);
+            var middle = (box.Top + box.Bottom) / 2;
+            return middle >= band.Top && middle <= band.Bottom;
+        }).ToList();
+        var grew = kept.Count > 0;
+        while (grew)
+        {
+            grew = false;
+            foreach (var line in lines)
+            {
+                if (kept.Contains(line)) continue;
+                var box = Place(line);
+                if (!kept.Any(other => Adjoins(box, Place(other)))) continue;
+                kept.Add(line);
+                grew = true;
+            }
+        }
+        return new Reading(reading.Lines.Where(kept.Contains));
+    }
+
+    /// <summary>İki satır alt alta mı: aralarındaki boşluk bir satır yüksekliğinden az ve yatayda hizalı (ortaları yakın ya da üst üste biniyor).</summary>
+    private static bool Adjoins(TextBox a, TextBox b)
+    {
+        var height = Math.Max(a.Bottom - a.Top, b.Bottom - b.Top);
+        var gap = Math.Max(a.Top, b.Top) - Math.Min(a.Bottom, b.Bottom);
+        if (gap > height * 0.9) return false;
+        var overlap = Math.Min(a.Right, b.Right) - Math.Max(a.Left, b.Left);
+        var narrower = Math.Min(a.Right - a.Left, b.Right - b.Left);
+        return Math.Abs(((a.Left + a.Right) / 2) - ((b.Left + b.Right) / 2)) <= CenterTolerance || (overlap > 0 && overlap >= narrower * 0.5);
+    }
+
     public Reading Subtitles(Reading reading, long now) =>
         new(Classify(reading, now).Where(f => f.Verdict == Verdict.Subtitle).Select(f => f.Line));
 

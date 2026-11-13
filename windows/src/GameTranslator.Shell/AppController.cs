@@ -993,6 +993,11 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         // Aynı okuma yinelenirse (yazı tanıma satırı hep böyle okuyor) beklemenin kalanı atlanır.
         built.SettledRelease = SubtitlePipeline.SettledAfterMs;
         built.TidySpeakersAndHeadings = true;
+        // Otomatik algılamada şerit sert bir kırpma değildir: şeridin çevresi geniş okunur, şeritteki satırlar ve onlara
+        // bitişik satırlar altyazıdır (üç dört satıra uzayan altyazının alt satırı kesiliyordu).
+        built.LineFilter = (read, area) => settings.AutoRegion && autoBand is { } band
+            ? SubtitleFinder.Grow(read, area, (band.Item1, band.Item2))
+            : read;
         // Cümlenin başı okunamamış parça ("bad at surrendering.") bozuk okumadır: tamamı gelsin diye bekletilir;
         // çok kısaysa ya da sözcüklerinin çoğu gerçek değilse hiç çevrilmez.
         var misread = built.LooksMisread;
@@ -1186,6 +1191,10 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     private string? findLanguage;
     private (double Top, double Bottom)? findBand;
     private volatile CropRegion? autoRegion;
+    /// <summary>Öğrenilen şerit (üst, alt); okunan geniş alandaki satırlar buna göre süzülür.</summary>
+    private volatile Tuple<double, double>? autoBand;
+    /// <summary>Okunan alan şeridin bu kadar üstünden ve altından başlar: uzayan altyazının satırları kesilmesin.</summary>
+    private const double BandMarginTop = 0.08, BandMarginBottom = 0.10;
     private long lastFind;
     private int finding;
 
@@ -1226,7 +1235,8 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
                     (findBand is not { } old || Math.Abs(old.Top - band.Top) > 0.035 || Math.Abs(old.Bottom - band.Bottom) > 0.035))
                 {
                     findBand = band;
-                    autoRegion = new CropRegion(Math.Max(0, band.Top - 0.01), Math.Min(1, band.Bottom + 0.01), AutoStart.Left, AutoStart.Right);
+                    autoBand = Tuple.Create(band.Top, band.Bottom);
+                    autoRegion = new CropRegion(Math.Max(0, band.Top - BandMarginTop), Math.Min(0.99, band.Bottom + BandMarginBottom), AutoStart.Left, AutoStart.Right);
                     SubtitleLog.Write($"otomatik: altyazı şeridi %{band.Top * 100:0}–%{band.Bottom * 100:0}" +
                                       (settings.AutoRegion ? " (okunan alan güncellendi)" : " (elle seçilen alan kullanılıyor)"));
                 }
