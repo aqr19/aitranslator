@@ -519,6 +519,8 @@
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                     <CheckBox x:Name="DesktopOverlayCheck" Content="🖥️ PC Ekranında Altyazı (Şeffaf Katman)" Checked="OnDesktopOverlayToggle" Unchecked="OnDesktopOverlayToggle" Margin="0,0,14,0" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" IsChecked="False" />
                                     <CheckBox x:Name="BoldCheck" Content="Kalın (Bold)" Checked="OnBold" Unchecked="OnBold" Margin="0,0,14,0" VerticalAlignment="Center" FontSize="11" />
+                                    <CheckBox x:Name="SpeakerColorCheck" Content="Konuşmacı adı renkli" Checked="OnSpeakerColor" Unchecked="OnSpeakerColor" Margin="0,0,14,0" VerticalAlignment="Center" FontSize="11"
+                                              ToolTip="Konuşan kişinin adı (ör. MARKOS:) çevirinin geri kalanından farklı renkte gösterilir." />
                                     <CheckBox x:Name="DubbingCheck" Content="Türkçe Dublaj" Checked="OnDubbing" Unchecked="OnDubbing" Margin="0,0,14,0" VerticalAlignment="Center" FontSize="11" />
                                     <CheckBox x:Name="MutePcCheck" Content="PC Sesini Kapat" Checked="OnMutePc" Unchecked="OnMutePc" VerticalAlignment="Center" FontSize="11" IsChecked="True" />
                                 </StackPanel>

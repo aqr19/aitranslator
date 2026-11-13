@@ -6,7 +6,7 @@
   'use strict';
 
   // TV uygulamasının sürümü: appinfo.json, tv-tizen/config.xml ve tv-android/app/build.gradle ile aynı tutulur.
-  var APP_VERSION = '1.0.2';
+  var APP_VERSION = '1.0.3';
   var t = window.t;
   var config = window.GAMETRANSLATOR_CONFIG || window.GAMETRANSLATOR_CONFIG || {};
   var platform = window.GAMETRANSLATOR_PLATFORM || window.GAMETRANSLATOR_PLATFORM;
@@ -33,6 +33,8 @@
   // Oyunun altyazısının satır yüksekliği (ekran yüksekliğine oranla); bilinmiyorsa 0.
   var currentLine = 0;
   var coverBackground = '';
+  // Konuşmacı adının rengi; boşsa ad ayrı renkte yazılmaz.
+  var speakerColor = '';
 
   // Önceki satır bu süreden kısa göründüyse okunamamış olabilir; yeni satırın üstünde bir süre daha kalır.
   var PREVIOUS_HOLD_MS = 2500;
@@ -177,7 +179,7 @@
     shownAt = Date.now();
     holdUntil = shownAt + Math.min(HOLD_MAX_MS, 2000 + text.length * 60);
     currentBox = validBox(box);
-    $('subtitle-text').textContent = text;
+    setSubtitleText($('subtitle-text'), text, paragraphs);
     $('subtitle-text').style.whiteSpace = paragraphs ? 'pre-line' : '';
     $('subtitle-text').style.textAlign = paragraphs ? 'left' : '';
     $('subtitle').className = '';
@@ -188,6 +190,29 @@
     // Geçersiz ya da çok kısa süre yazıyı gösterir göstermez kaldırmasın.
     var ms = duration > 0 ? Math.max(1000, duration) : Math.min(8000, 2000 + text.length * 60);
     hideTimer = setTimeout(function () { hideSubtitle('timer'); }, ms);
+  }
+
+  // Konuşmacı adları ("MARKOS: …", cümle ortasında başlayan ikinci konuşmacı dahil) ayarlarda açıksa ayrı renkte
+  // yazılır. Ad büyük harfle başlayan en çok üç sözcüktür ve satır başında ya da bir cümlenin bitiminde durur.
+  var SPEAKER = /(^|[.!?…”"]\s+|\n)([A-ZÇĞİÖŞÜÂÎÛ][^\s:.!?]*(?: [A-ZÇĞİÖŞÜÂÎÛ][^\s:.!?]*){0,2}):(?=\s)/g;
+  function setSubtitleText(el, text, paragraphs) {
+    if (!speakerColor || paragraphs) {
+      el.textContent = text;
+      return;
+    }
+    el.textContent = '';
+    var last = 0, match;
+    SPEAKER.lastIndex = 0;
+    while ((match = SPEAKER.exec(text)) !== null) {
+      var nameStart = match.index + match[1].length;
+      if (nameStart > last) el.appendChild(document.createTextNode(text.slice(last, nameStart)));
+      var name = document.createElement('span');
+      name.style.color = speakerColor;
+      name.textContent = match[2] + ':';
+      el.appendChild(name);
+      last = SPEAKER.lastIndex;
+    }
+    if (last < text.length) el.appendChild(document.createTextNode(text.slice(last)));
   }
 
   // Yazının ekrandaki gerçek yeri ve görünürlüğü (tanı için).
@@ -457,6 +482,7 @@
       $('subtitle-prev-text').style.color = style.color;
     }
     if (PLACEMENTS[style.placement]) placement = style.placement;
+    if (typeof style.speakerColor === 'string') speakerColor = style.speakerColor;
     if (typeof style.background === 'number') {
       var alpha = Math.max(0, Math.min(100, style.background)) / 100;
       $('subtitle-text').style.background = 'rgba(0, 0, 0, ' + alpha + ')';

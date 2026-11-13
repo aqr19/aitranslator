@@ -39,7 +39,8 @@ public sealed record SubtitleStyle(
     bool Bold = false,
     SubtitleTextColor TextColor = SubtitleTextColor.White,
     TvDisplayMode DisplayMode = TvDisplayMode.InApp,
-    bool StackPrevious = true);
+    bool StackPrevious = true,
+    bool SpeakerColor = false);
 
 /// <summary>
 /// Android TV'de PS5 görüntüsünün nasıl gösterildiği. Yalnız Android TV uygulaması kullanır; diğer TV'ler ve OBS
@@ -493,6 +494,8 @@ public sealed class SubtitleServer(int port = 8787, TimeSpan? pingInterval = nul
             ["displayMode"] = style.DisplayMode == TvDisplayMode.Overlay ? "overlay" : "inApp",
             ["fontSize"] = style.FontSize,
             ["placement"] = style.Placement.ToString().ToLowerInvariant(),
+            // Konuşmacı adının rengi ("" kapalı): yazı sarıysa ad açık mavi, değilse sarı yazılır (yeni TV uygulaması).
+            ["speakerColor"] = !style.SpeakerColor ? "" : style.TextColor == SubtitleTextColor.Yellow ? "#64D2FF" : "#FFD60A",
             ["stackPrevious"] = style.StackPrevious && style.Placement != SubtitlePlacement.Cover,
             ["textColor"] = style.TextColor.ToString().ToLowerInvariant(),
         });

@@ -129,6 +129,7 @@ public partial class MainView : UserControl
 
         // Checkboxlar
         BoldCheck.IsChecked = s.Style.Bold;
+        SpeakerColorCheck.IsChecked = s.Style.SpeakerColor;
         DubbingCheck.IsChecked = s.DubbingEnabled;
         MutePcCheck.IsChecked = isMutePc;
         UpdatePcSesiButton();
@@ -715,6 +716,14 @@ public partial class MainView : UserControl
     {
         if (loading) return;
         controller.Settings = controller.Settings with { Style = controller.Settings.Style with { Bold = BoldCheck.IsChecked == true } };
+        controller.SyncStyle();
+        UpdateTvPreview();
+    }
+
+    private void OnSpeakerColor(object sender, RoutedEventArgs e)
+    {
+        if (loading) return;
+        controller.Settings = controller.Settings with { Style = controller.Settings.Style with { SpeakerColor = SpeakerColorCheck.IsChecked == true } };
         controller.SyncStyle();
         UpdateTvPreview();
     }
