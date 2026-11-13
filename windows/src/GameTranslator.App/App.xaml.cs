@@ -37,6 +37,18 @@ public partial class App : Application
         }
     }
 
+    /// <summary>
+    /// Okuma hattına yazım denetimini bağlar: gerçek olmayan sözcük içeren okuma "bozuk" sayılıp kısa süre bekletilir
+    /// ve aynı satırın okumalarından sözcükleri gerçek olan seçilir. İngilizce yazım sözlüğü yoksa hiçbir şey değişmez.
+    /// </summary>
+    static void UseSpelling()
+    {
+        if (WindowsSpelling.Create("en") is not { } spelling) return;
+        var misspelling = new Misspelling(spelling.IsWord);
+        SubtitlePipeline.ExtraMisreadCheck = misspelling.LooksMisread;
+        SubtitlePipeline.ExtraReadingScore = misspelling.Score;
+    }
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     void Start(string? renderFolder)
     {
@@ -47,6 +59,7 @@ public partial class App : Application
         }
         RemotePlayDiagnostics.Start();
         SubtitleLog.Enable();
+        UseSpelling();
         ThemeManager.Apply(Resources);
         ThemeManager.Follow(Resources);
         var controller = new AppController(new LiveServices(), new DpapiAppStore(), new FileSettingsStore(), new WindowsSleepGuard(),

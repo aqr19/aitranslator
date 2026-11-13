@@ -31,6 +31,13 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
     /// Pakette hiç olmayan satır da en çok bu kadar gecikir.
     /// </summary>
     public const int CleanWaitMs = 300;
+    /// <summary>Bekletilen okuma bu kadar sonra aynen yeniden okunursa beklemenin kalanı atlanır.</summary>
+    public const int SettledAfterMs = 200;
+    /// <summary>
+    /// Erken bırakma süresi (0: kapalı, bekleme hep sonuna kadar sürer). Paketi olan oyunda bozuk okuma paketteki düzgün
+    /// okumayı beklemek için sonuna kadar tutulur; paketi olmayan oyunda aynen yinelenen okumayı bekletmek yalnız gecikmedir.
+    /// </summary>
+    public int SettledRelease { get; set; }
     public int CleanWait { get; set; } = CleanWaitMs;
     /// <summary>Okuma bozuk mu (bekletilecek mi); uygulama yazım denetimiyle daha iyisini verebilir.</summary>
     public Func<string, bool> LooksMisread { get; set; } = text => PackFuzzy.Damaged(text) || (ExtraMisreadCheck?.Invoke(text) ?? false);
@@ -291,7 +298,11 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
                         var merged = KeepMissingLines(text, waiting.Source);
                         held = waiting = (merged, box ?? waiting.Box, waiting.Since, waiting.Wait, ReadingScore(merged), waiting.Read);
                     }
-                    if (now() - waiting.Since >= waiting.Wait)
+                    // Aynı okuma yine geldiyse yazı tanıma satırı hep böyle okuyordur (ör. kesme işaretini hiç görmüyor);
+                    // daha iyisi gelmeyecek, sürenin dolması beklenmez.
+                    var settled = SettledRelease > 0 && TextMatch.Normalize(text) == TextMatch.Normalize(waiting.Source) &&
+                                  now() - waiting.Since >= SettledRelease;
+                    if (settled || now() - waiting.Since >= waiting.Wait)
                     {
                         held = null;
                         after = Enqueue(waiting.Source, waiting.Box, waiting.Read);
@@ -371,7 +382,19 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
         if (norm.Length == 0) return true;
         var flatPrevious = previous.Replace('\n', ' ');
         if (IsRereadOf(line, flatPrevious)) return true;
-        return previous.Split('\n').Any(old => TextMatch.Normalize(old) == norm || IsRereadOf(line, old));
+        if (previous.Split('\n').Any(old => TextMatch.Normalize(old) == norm || IsRereadOf(line, old))) return true;
+        // Konuşmacı adı bir karede okunup ötekinde kaçabiliyor ("Kraven: Pathetic." ardından "Pathetic."): adsız okuma
+        // aynı satırdır, yeni satır değil (aynı çeviri bir adlı bir adsız iki kez gösteriliyordu).
+        return previous.Split('\n').Select(WithoutSpeaker).Any(bare => bare is not null && (TextMatch.Normalize(bare) == norm || IsRereadOf(line, bare)));
+    }
+
+    /// <summary>"Kraven: Pathetic." → "Pathetic."; satır konuşmacı adıyla başlamıyorsa null.</summary>
+    private static string? WithoutSpeaker(string line)
+    {
+        var trimmed = line.Trim();
+        var colon = trimmed.IndexOf(':');
+        if (colon is < 2 or > 30 || !char.IsUpper(trimmed[0]) || colon >= trimmed.Length - 2) return null;
+        return trimmed[(colon + 1)..].Trim();
     }
 
     /// <summary>
@@ -513,7 +536,16 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
     }
 
     /// <summary>Satır az önce gösterilenin uzamış ya da düzelmiş okuması mı (TV yerine koyar, üstüne yığmaz).</summary>
-    private bool RevisesShown(string source) => LastPair is { } shown && TextMatch.IsRevision(source, shown.Source);
+    private bool RevisesShown(string source)
+    {
+        if (LastPair is not { } shown) return false;
+        if (TextMatch.IsRevision(source, shown.Source)) return true;
+        // Önce adsız okunup sonra konuşmacı adıyla gelen satır aynı satırın düzelmiş hâlidir ("I know!" ardından
+        // "Ganke: I know!"): TV'de öncekinin üstüne yığılmaz, yerine geçer.
+        return source.Split('\n').Length == 1 && WithoutSpeaker(source) is { } bare &&
+               (TextMatch.Normalize(bare) == TextMatch.Normalize(shown.Source) || TextMatch.IsRevision(bare, shown.Source) ||
+                TextMatch.IsSimilar(TextMatch.Normalize(bare), TextMatch.Normalize(shown.Source), 0.8));
+    }
 
     /// <summary>Paketteki Türkçe hemen gösterilir; süren çevirinin sonucu (eski satır) artık gösterilmez.</summary>
     private Action? ShowPacked(Request request, PackMatch packed)

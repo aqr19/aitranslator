@@ -118,6 +118,8 @@
                                 <RadioButton Content="{t:T 'Area 3 (Num 3)'}" GroupName="area" Style="{StaticResource SegmentButton}" Checked="OnArea" Tag="3" />
                             </StackPanel>
                         </Border>
+                        <CheckBox x:Name="AutoArea" Content="{t:T 'Find the subtitles automatically'}" Foreground="{DynamicResource textPrimaryBrush}" Margin="0,0,0,12"
+                                  Checked="OnAutoArea" Unchecked="OnAutoArea" />
                         <CheckBox x:Name="UseArea" Content="{t:T 'Use this area'}" Foreground="{DynamicResource textPrimaryBrush}" Margin="0,0,0,12"
                                   Visibility="Collapsed" Checked="OnUseArea" Unchecked="OnUseArea" />
                         <StackPanel x:Name="ExtraTargetPanel" Visibility="Collapsed" Margin="0,0,0,12">

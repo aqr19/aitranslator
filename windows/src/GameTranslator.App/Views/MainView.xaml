@@ -289,6 +289,8 @@
 
                             <!-- Hazır Şablonlar (Presets) -->
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Button x:Name="PresetAuto" Content="Otomatik (Önerilen)" Tag="Auto" Click="OnPresetClick" Style="{StaticResource SecondaryButton}" Margin="0,0,6,0" Padding="10,4" FontSize="10.5"
+                                        ToolTip="Uygulama altyazının yerini kendisi bulur; menüleri, ipuçlarını ve göstergeleri yok sayar." />
                                 <Button x:Name="PresetBottomCenter" Content="Alt Orta (Standart)" Tag="BottomCenter" Click="OnPresetClick" Style="{StaticResource SecondaryButton}" Margin="0,0,6,0" Padding="10,4" FontSize="10.5" />
                                 <Button x:Name="PresetBottomWide" Content="Geniş Alt Bant" Tag="BottomWide" Click="OnPresetClick" Style="{StaticResource SecondaryButton}" Margin="0,0,6,0" Padding="10,4" FontSize="10.5" />
                                 <Button x:Name="PresetFullBottom" Content="Tüm Alt Yarı" Tag="FullBottom" Click="OnPresetClick" Style="{StaticResource SecondaryButton}" Margin="0,0,6,0" Padding="10,4" FontSize="10.5" />

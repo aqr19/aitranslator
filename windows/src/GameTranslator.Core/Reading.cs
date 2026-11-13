@@ -151,6 +151,12 @@ public static class ButtonPrompts
     /// <summary>Simge yazı tanımada harfe dönüşebilir; yalnız ipucu kalıbında düğme sayılır.</summary>
     private static readonly HashSet<string> Lookalikes = new(StringComparer.Ordinal) { "X", "O" };
 
+    /// <summary>
+    /// Düğme adının yanlış okunmuş hali: "R1" → "RI" / "Rl", "L2" → "LZ". Yalnız satır başında ve cümle gibi bitmeyen
+    /// kısa satırda düğme sayılır ("RI (Hold) Pull", "LI Spider Barrage"); "Li, come here." konuşmadır.
+    /// </summary>
+    private static readonly HashSet<string> MisreadButtons = new(StringComparer.Ordinal) { "RI", "LI", "Rl", "Ll", "RZ", "LZ" };
+
     private static readonly HashSet<string> Verbs = new(StringComparer.OrdinalIgnoreCase)
     {
         "press", "hold", "tap", "push", "use", "mash", "release",
@@ -171,15 +177,17 @@ public static class ButtonPrompts
 
         // "R2 Swing", "△ Pick up", "L1 R1 Spartan Rage"
         if (Buttons.Contains(first)) return words <= 5;
+        if (MisreadButtons.Contains(first) && tokens.Count >= 2 && words <= 6 && !SubtitleStabilizer.EndsSentence(line)) return true;
         // "PHOTO MODE L1 + R1": düğme sonda, önünde kısa ve noktalamasız bir eylem adı.
         if (Buttons.Contains(tokens[^1]) && words <= 4 && !SubtitleStabilizer.EndsSentence(line)) return true;
         // "X Interact", "O Back": ardından kısa, büyük harfle başlayan, noktalamasız bir eylem gelir.
         if (Lookalikes.Contains(first) && tokens.Count is >= 2 and <= 4 && char.IsUpper(tokens[1][0]) &&
             !SubtitleStabilizer.EndsSentence(line))
             return true;
-        // "Press ✕ to jump", "Hold R2 to aim"
+        // "Press ✕ to jump", "Hold R2 to aim"; düğme simgesi harf olmayan bir işarete dönüşebilir ("PRESS @ TO CONTINUE").
         if (Verbs.Contains(first) && tokens.Count is >= 2 and <= 10)
-            return Buttons.Contains(tokens[1]) || Lookalikes.Contains(tokens[1]);
+            return Buttons.Contains(tokens[1]) || Lookalikes.Contains(tokens[1]) || MisreadButtons.Contains(tokens[1]) ||
+                   (tokens[1].Length <= 2 && !tokens[1].Any(char.IsLetterOrDigit));
         return false;
     }
 }

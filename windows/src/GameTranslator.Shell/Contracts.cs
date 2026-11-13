@@ -40,6 +40,11 @@ public enum TranslationEngine
 public sealed record UserSettings
 {
     public CropRegion Region { get; init; } = new();
+    /// <summary>
+    /// Altyazının yeri kendiliğinden bulunur (<see cref="SubtitleFinder"/>); <see cref="Region"/> yalnız kapalıyken
+    /// kullanılır. Altyazıyı alışılmadık yerde gösteren oyunlar için kapatılıp alan elle çizilebilir.
+    /// </summary>
+    public bool AutoRegion { get; init; } = true;
     /// <summary>Aktif çeviri motoru (DirectML, Gemini veya DeepL).</summary>
     public TranslationEngine Engine { get; init; } = TranslationEngine.DirectML;
     /// <summary>Ek bölge 1 (ör. sağ üstteki görev paneli); null ise kapalı. Num 1 tuşuyla bir kez okunup çevrilir.</summary>

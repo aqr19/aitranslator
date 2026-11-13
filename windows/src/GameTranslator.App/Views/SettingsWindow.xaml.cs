@@ -168,6 +168,8 @@ public partial class SettingsWindow : Window
     private void OnRegion(object? sender, CropRegion region)
     {
         var slot = area;
+        // Otomatikken gösterilen çerçeve uygulamanın bulduğu yerdir; elle seçilen alanın üstüne yazılmaz.
+        if (slot == 0 && controller.Settings.AutoRegion) return;
         Update(s => slot == 0 ? s with { Region = region } : s.WithExtraRegion(slot, region));
     }
 
@@ -188,14 +190,20 @@ public partial class SettingsWindow : Window
         {
             UseArea.Visibility = Visibility.Collapsed;
             ExtraTargetPanel.Visibility = Visibility.Collapsed;
-            Region.IsEnabled = true;
+            AutoArea.Visibility = Visibility.Visible;
+            AutoArea.IsChecked = settings.AutoRegion;
+            // Otomatikken çerçeve uygulamanın bulduğu yeri gösterir ve elle değiştirilemez.
+            Region.IsEnabled = !settings.AutoRegion;
             Region.DefaultRegion = new CropRegion();
-            Region.ShowRegion(settings.Region);
-            AreaHint.Text = text["Drag on the picture to draw the area where the game shows its subtitles. Drag the edges to resize it, or the inside to move it."];
+            Region.ShowRegion(settings.AutoRegion ? controller.ActiveRegion : settings.Region);
+            AreaHint.Text = settings.AutoRegion
+                ? text["The app finds where the game shows its subtitles by itself and ignores menus, hints and on-screen indicators. Turn this off to draw the area yourself."]
+                : text["Drag on the picture to draw the area where the game shows its subtitles. Drag the edges to resize it, or the inside to move it."];
         }
         else
         {
             var extra = settings.ExtraRegion(slot);
+            AutoArea.Visibility = Visibility.Collapsed;
             UseArea.Visibility = Visibility.Visible;
             UseArea.IsChecked = extra is not null;
             ExtraTargetPanel.Visibility = Visibility.Visible;
@@ -214,6 +222,14 @@ public partial class SettingsWindow : Window
         var slot = area;
         var target = Enum.Parse<ResultTarget>(tag);
         Update(s => s.WithExtraTarget(slot, target));
+    }
+
+    private void OnAutoArea(object sender, RoutedEventArgs e)
+    {
+        if (loading || area != 0) return;
+        var on = AutoArea.IsChecked == true;
+        Update(s => s with { AutoRegion = on });
+        ShowArea(0);
     }
 
     private void OnUseArea(object sender, RoutedEventArgs e)

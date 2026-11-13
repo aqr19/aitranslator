@@ -978,10 +978,25 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         activeReader = reader;
         OcrMissing = reader is null || !services.HasOcrLanguage(settings.SourceLanguage);
         if (reader is null) return;
-        var built = new SubtitlePipeline(reader, MakeTranslator(), server, new ReadScheduler());
-        built.PackLookup = CommunityPatchManager.Shared.Match;
+        // Art arda altyazılara bölünen cümle bütün olarak çevrilir (hangi motor seçilirse seçilsin).
+        var built = new SubtitlePipeline(reader, new ContinuationTranslator(MakeTranslator()), server, new ReadScheduler());
+        // Paket yalnız oynanan oyunun paketiyse kullanılır (başka oyunun genel satırları yanlış çeviri basıyordu).
+        var packGate = new PackGate();
+        built.PackLookup = text => packGate.Filter(text, CommunityPatchManager.Shared.Match(text));
+        // Paket beklemesi kısa tutulur: 1.5.1'deki 300 / 800 ms her satıra gecikme ekliyordu. Tam cümle zaten
+        // beklemez; yarım görünen satır ve bozuk görünen okuma yalnız daha iyisine fırsat verecek kadar bekler.
+        // (Başka oyunların paketleri genel satırlarda ("Leave me alone!") isabet verdiği için isabete göre ayarlanmaz.)
+        // Bozuk okuma (yazım denetimine göre gerçek olmayan sözcük içeren satır) biraz daha uzun bekler: hareketli
+        // sahnede düzgün okuma çoğunlukla yarım saniye içinde geliyor; temiz satır bundan etkilenmez.
+        built.CleanWait = 150;
+        built.PackWait = 450;
+        // Aynı okuma yinelenirse (yazı tanıma satırı hep böyle okuyor) beklemenin kalanı atlanır.
+        built.SettledRelease = SubtitlePipeline.SettledAfterMs;
+        // Altyazı günlüğü (altyazi.log): okunan satırlar ve akıbetleri; gösterilen çevirinin kendisi de yazılır.
+        built.Log = SubtitleLog.Write;
         built.PairShown += (source, translation) =>
         {
+            SubtitleLog.Write($"çeviri: {SubtitleLog.Excerpt(source)} ⇒ {SubtitleLog.Excerpt(translation)}");
             var box = built.LastBox;
             var ms = RegionTranslation.DisplayMilliseconds(translation);
             post(() =>
@@ -989,7 +1004,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
                 LastSource = source;
                 LastTranslation = translation;
                 if (box is not null) lastSubtitleBox = box;
-                var targetBox = box ?? lastSubtitleBox ?? (settings.Region is { } r
+                var targetBox = box ?? lastSubtitleBox ?? (ActiveRegion is { } r
                     ? new TextBox(r.Left, r.Top, r.Right, r.Bottom)
                     : null);
                 LiveSubtitleShown?.Invoke(translation, ms, targetBox);
@@ -1132,12 +1147,13 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         post(() => LastFrame = frame);
         // Duraklatıldıysa kare yalnız ek bölgeler ve serbest alan için saklanır; altyazı okunmaz.
         if (subtitlesPaused) return;
+        TryFindSubtitles(frame);
         // Önceki kare hâlâ işleniyorsa bu kare atlanır; okuma kareleri biriktirmez.
         var current = pipeline;
         if (current is null || Interlocked.Exchange(ref processing, 1) == 1) return;
         try
         {
-            await current.ProcessAsync(frame, settings.Region);
+            await current.ProcessAsync(frame, ActiveRegion);
         }
         catch
         {
@@ -1148,6 +1164,86 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
             Volatile.Write(ref processing, 0);
         }
     }
+
+    // Otomatik altyazı algılama (SubtitleFinder): karenin tamamı ayrı bir okuyucuyla aralıklı okunur (şerit öğrenilene
+    // kadar saniyede bir, sonra iki saniyede bir). Öğrenilen şerit, ayarlarda "otomatik" açıkken okunan alan olur;
+    // hızlı okuma yalnız o şeritte yapılır. Bulgular altyazı günlüğüne "otomatik:" diye yazılır.
+    private const int FindEveryMs = 2000;
+    private const int LearnEveryMs = 1000;
+    /// <summary>Şerit öğrenilene kadar okunan alan: ekranın alt yarısına yakın, kenarlar hariç.</summary>
+    private static readonly CropRegion AutoStart = new(Top: 0.55, Bottom: 0.98, Left: 0.08, Right: 0.92);
+    private readonly SubtitleFinder finder = new();
+    private readonly HashSet<string> findLogged = [];
+    private ITextReader? findReader;
+    private string? findLanguage;
+    private (double Top, double Bottom)? findBand;
+    private volatile CropRegion? autoRegion;
+    private long lastFind;
+    private int finding;
+
+    /// <summary>Altyazının okunduğu alan: otomatikse öğrenilen şerit (henüz öğrenilmediyse geniş alt alan), değilse elle çizilen.</summary>
+    public CropRegion ActiveRegion => settings.AutoRegion ? autoRegion ?? AutoStart : settings.Region;
+
+    private void TryFindSubtitles(Frame frame)
+    {
+        var at = Environment.TickCount64;
+        if (!settings.AutoRegion && !SubtitleLog.IsEnabled) return;
+        var every = autoRegion is null ? LearnEveryMs : FindEveryMs;
+        if (at - lastFind < every || Interlocked.Exchange(ref finding, 1) == 1) return;
+        lastFind = at;
+        var language = settings.SourceLanguage;
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                if (findReader is null || findLanguage != language)
+                {
+                    findReader = services.MakeReader(language);
+                    findLanguage = language;
+                }
+                if (findReader is not { } reader) return;
+                var reading = reader.ReadLines(frame, deep: false).WithoutOcrNoise();
+                var took = Environment.TickCount64 - at;
+                foreach (var found in finder.Classify(reading, at))
+                {
+                    if (!findLogged.Add(found.Verdict + ":" + TextMatch.Normalize(found.Line.Text))) continue;
+                    if (findLogged.Count > 600) findLogged.Clear();
+                    var box = found.Line.Box!.Value;
+                    SubtitleLog.Write($"otomatik: {FindName(found.Verdict)} y=%{(box.Top + box.Bottom) * 50:0} x=%{(box.Left + box.Right) * 50:0} " +
+                                      $"({took} ms) {SubtitleLog.Excerpt(found.Line.Text)}");
+                }
+                // Şerit her yeni altyazıyla azıcık oynar; okunan alan yalnız belirgin değişince güncellenir (alan
+                // değişince okuma baştan kararlı hale gelmek zorunda kalır).
+                if (finder.Band is { } band &&
+                    (findBand is not { } old || Math.Abs(old.Top - band.Top) > 0.035 || Math.Abs(old.Bottom - band.Bottom) > 0.035))
+                {
+                    findBand = band;
+                    autoRegion = new CropRegion(Math.Max(0, band.Top - 0.01), Math.Min(1, band.Bottom + 0.01), AutoStart.Left, AutoStart.Right);
+                    SubtitleLog.Write($"otomatik: altyazı şeridi %{band.Top * 100:0}–%{band.Bottom * 100:0}" +
+                                      (settings.AutoRegion ? " (okunan alan güncellendi)" : " (elle seçilen alan kullanılıyor)"));
+                }
+            }
+            catch
+            {
+                // Deneme okuması başarısız olursa yalnız o tarama atlanır.
+            }
+            finally
+            {
+                Volatile.Write(ref finding, 0);
+            }
+        });
+    }
+
+    private static string FindName(SubtitleFinder.Verdict verdict) => verdict switch
+    {
+        SubtitleFinder.Verdict.Subtitle => "ALTYAZI",
+        SubtitleFinder.Verdict.Prompt => "elendi(tuş ipucu)",
+        SubtitleFinder.Verdict.Menu => "elendi(menü)",
+        SubtitleFinder.Verdict.Static => "elendi(sabit yazı)",
+        SubtitleFinder.Verdict.OffCenter => "elendi(ortada değil)",
+        SubtitleFinder.Verdict.NotSentence => "elendi(cümle değil)",
+        _ => "elendi(şerit dışı)",
+    };
 
     private async Task StartServerAsync()
     {

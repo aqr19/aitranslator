@@ -1,0 +1,140 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+
+using System.Text.RegularExpressions;
+using GameTranslator.Core.Dubbing;
+
+namespace GameTranslator.Core;
+
+/// <summary>
+/// Oyunlar uzun cümleyi art arda gelen birkaç altyazıya böler ("You're the ones" → "who are gonna need help..." →
+/// "when they come for you."). Parçalar tek tek çevrilince anlam dağılır ("Sizlersiniz" / "Kimin yardıma ihtiyacı
+/// olacak..."). Bu sarmalayıcı, cümlesi bitmemiş satırın ardından aynı konuşmacıdan gelen devamı önceki parçayla
+/// birlikte çevirir ve cümlenin o ana kadarki tamamının çevirisini verir.
+/// Ayrıca aynı okumada iki kez gelen satırı ("A fate you will not share." alt alta iki kez) teke indirir.
+/// Kendi durumunu tutar; başka bir çevirmeni sarar.
+/// </summary>
+public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<long>? clock = null) : ITextTranslator
+{
+    /// <summary>Önceki parçadan en çok bu kadar sonra gelen satır onun devamı sayılabilir.</summary>
+    public const int WithinMs = 8000;
+    /// <summary>Birleşen cümle bundan uzunsa yeni satır tek başına çevrilir (zincir sonsuza uzamasın).</summary>
+    public const int MaxLength = 260;
+
+    private readonly Func<long> now = clock ?? (() => Environment.TickCount64);
+    private readonly object gate = new();
+    private (string? Speaker, string Body, string Raw, long At)? previous;
+
+    public bool Prefetches => inner.Prefetches;
+    public void Prefetch(string text) => inner.Prefetch(text);
+    public IReadOnlyList<SpokenLine> SpokenLines(string text) => inner.SpokenLines(text);
+
+    public async Task<string> TranslateAsync(string text, CancellationToken cancellationToken = default)
+    {
+        var source = WithoutRepeatedLines(text);
+        string request;
+        lock (gate) request = Combine(source);
+        return await inner.TranslateAsync(request, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Satır önceki parçanın devamıysa ikisi birlikte, değilse kendisi. Durumu günceller.</summary>
+    private string Combine(string source)
+    {
+        var (speaker, body) = Split(source);
+        var at = now();
+        // Konuşmacı adı bozuk okunmuşsa ("anke: …", önceki satır "Ganke: …") ad sözün parçası sayılmasın.
+        if (speaker is null && previous is { Speaker: { } known } && at - previous.Value.At <= WithinMs)
+        {
+            var colon = body.IndexOf(": ", StringComparison.Ordinal);
+            if (colon is >= 2 and <= 24 && !body[..colon].Contains(' ') == !known.Contains(' ') && SameName(body[..colon], known))
+            {
+                speaker = known;
+                body = body[(colon + 2)..].Trim();
+                source = $"{known}: {body}";
+            }
+        }
+        var request = source;
+        var whole = body;
+        if (previous is { } last && at - last.At <= WithinMs && !source.Contains('\n') && !last.Body.Contains('\n') &&
+            (speaker is null || speaker == last.Speaker) && Continues(last.Body, body) && !SameLine(last.Raw, source) &&
+            last.Body.Length + body.Length + 1 <= MaxLength)
+        {
+            whole = last.Body + " " + body;
+            var label = speaker ?? last.Speaker;
+            request = label is null ? whole : $"{label}: {whole}";
+            speaker = label;
+        }
+        // Aynı satırın yeniden okunması zinciri ilerletmez (yoksa satır kendisiyle birleşirdi).
+        if (previous is not { } kept || !SameLine(kept.Raw, source))
+            previous = (speaker, whole, source, at);
+        return request;
+    }
+
+    /// <summary>Önceki parça cümleyi bitirmediyse ya da yeni parça küçük harfle başlıyorsa devamdır.</summary>
+    private static bool Continues(string before, string after)
+    {
+        var first = after.FirstOrDefault(char.IsLetter);
+        if (first == default) return false;
+        // Sondaki tırnak ve yazı tanıma artıkları ("wait--'") sayılmaz.
+        var trimmed = before.TrimEnd().TrimEnd('\'', '"', '’', '”', '`', ' ');
+        // Küçük harfle başlayan satır her zaman bir öncekinin devamıdır ("...need help..." → "when they come for you.").
+        if (char.IsLower(first)) return trimmed.Length > 0 && !".!?".Contains(trimmed[^1]) || trimmed.EndsWith("...", StringComparison.Ordinal) || trimmed.EndsWith('…');
+        // Büyük harfle başlayan satır yalnız önceki virgülle ya da noktalı virgülle bittiyse devamdır ("…in your old age," →
+        // "Sergei."). Noktalamasız biten satırdan sonra gelen büyük harfli satır çoğunlukla başka bir yazıdır
+        // ("PRESS X TO CONTINUE" → "LEVEL 2"), "--" ile kesilen sözden sonra gelen de başka bir cümledir.
+        return trimmed.EndsWith(',') || trimmed.EndsWith(';');
+    }
+
+    /// <summary>Okunan ad, bilinen adın birkaç harfi eksik ya da yanlış hâli mi ("anke", "Gankc" → "Ganke").</summary>
+    private static bool SameName(string read, string known)
+    {
+        var (a, b) = (read.Trim('-', '—', '_', ' ', '.', '•').ToLowerInvariant(), known.ToLowerInvariant());
+        if (a.Length < 3 || b.Length < 4) return false;
+        return b.EndsWith(a, StringComparison.Ordinal) || TextMatch.IsSimilar(a, b, 0.75);
+    }
+
+    private static bool SameLine(string a, string b)
+    {
+        var (left, right) = (TextMatch.Normalize(a), TextMatch.Normalize(b));
+        return left == right || TextMatch.IsSimilar(left, right, 0.8) || (left.Length >= 8 && right.Length >= 8 && (left.Contains(right) || right.Contains(left)));
+    }
+
+    /// <summary>"Flint Marko: who are gonna need help..." → ("Flint Marko", "who are gonna need help...").</summary>
+    private static (string? Speaker, string Body) Split(string text)
+    {
+        var match = SpeakerLabel().Match(text);
+        return match.Success ? (match.Groups["name"].Value, text[match.Length..].Trim()) : (null, text.Trim());
+    }
+
+    [GeneratedRegex(@"^(?<name>\p{Lu}[\p{L}.’'-]*(?: \p{Lu}[\p{L}.’'-]*){0,2}):\s")]
+    private static partial Regex SpeakerLabel();
+
+    private static bool IsTailCopy(string line, string earlier)
+    {
+        var a = TextMatch.Normalize(line).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var b = TextMatch.Normalize(earlier).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return a.Length >= 3 && a.Length <= b.Length && a[^1] == b[^1] && a[^2] == b[^2];
+    }
+
+    /// <summary>Alt alta gelen neredeyse aynı satırlardan (aynı altyazının iki okuması) daha düzgün okunan kalır.</summary>
+    public static string WithoutRepeatedLines(string text)
+    {
+        var lines = text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (lines.Length < 2) return text.Trim();
+        var kept = new List<string>();
+        foreach (var line in lines)
+        {
+            // Tekrar hemen alttaki satır olmayabilir ("A / B / A'nın ikinci okuması"). Önceki satırın sonunun bozuk bir
+            // kopyası da tekrardır: son iki sözcüğü aynıdır ve daha uzun değildir.
+            var twin = kept.FindIndex(earlier => TextMatch.IsSimilar(TextMatch.Normalize(earlier), TextMatch.Normalize(line), 0.8) || IsTailCopy(line, earlier));
+            if (twin >= 0)
+            {
+                // Puan eşitse sözcükleri ayrı okunan kazanır ("yowwill" yerine "you will").
+                var (better, current) = (OcrNoise.Score(line), OcrNoise.Score(kept[twin]));
+                if (better > current || (better == current && line.Count(c => c == ' ') > kept[twin].Count(c => c == ' '))) kept[twin] = line;
+                continue;
+            }
+            kept.Add(line);
+        }
+        return string.Join('\n', kept);
+    }
+}

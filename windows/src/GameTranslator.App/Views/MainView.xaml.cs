@@ -116,6 +116,12 @@ public partial class MainView : UserControl
         CropLeftSlider.Value = s.Region.Left;
         CropRightSlider.Value = s.Region.Right;
 
+        if (s.AutoRegion)
+        {
+            selectedPreset = "Auto";
+            ShortcutPresetText.Text = "Otomatik";
+        }
+
         CropTopLabel.Text = $"%{Math.Round(s.Region.Top * 100)}";
         CropBottomLabel.Text = $"%{Math.Round(s.Region.Bottom * 100)}";
         CropLeftLabel.Text = $"%{Math.Round(s.Region.Left * 100)}";
@@ -429,6 +435,12 @@ public partial class MainView : UserControl
         loading = true;
         switch (tag)
         {
+            case "Auto":
+                // Altyazının yeri kendiliğinden bulunur; aşağıdaki kutu yalnız elle seçimde kullanılır.
+                ShortcutPresetText.Text = "Otomatik";
+                controller.Settings = controller.Settings with { AutoRegion = true };
+                loading = false;
+                return;
             case "BottomCenter":
                 CropTopSlider.Value = 0.72;
                 CropBottomSlider.Value = 0.85;
@@ -464,6 +476,7 @@ public partial class MainView : UserControl
 
         controller.Settings = controller.Settings with
         {
+            AutoRegion = false,
             Region = new CropRegion(CropTopSlider.Value, CropBottomSlider.Value, CropLeftSlider.Value, CropRightSlider.Value)
         };
         UpdateOcrBox();
@@ -478,6 +491,7 @@ public partial class MainView : UserControl
 
         controller.Settings = controller.Settings with
         {
+            AutoRegion = false,
             Region = new CropRegion(CropTopSlider.Value, CropBottomSlider.Value, CropLeftSlider.Value, CropRightSlider.Value)
         };
         UpdateOcrBox();

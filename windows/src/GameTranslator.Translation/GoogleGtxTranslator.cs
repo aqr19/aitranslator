@@ -47,6 +47,8 @@ public sealed class GoogleGtxTranslator : ITextTranslator
             if (trimmed.Length == 0) return prefix;
         }
 
+        trimmed = JoinWrappedLines(trimmed);
+
         // 1. Önbellek kontrolü (anında yanıt, 0 ağ gecikmesi)
         var cacheKey = $"{_source}->{_target}:{trimmed}";
         if (Cache.TryGetValue(cacheKey, out var cached))
@@ -94,6 +96,29 @@ public sealed class GoogleGtxTranslator : ITextTranslator
 
         // Çeviri başarısız olduysa İngilizce metni Türkçe gibi gösterme, hata fırlatarak hattın yeniden denemesini sağla
         throw new TranslatorException(TranslatorStatus.EngineFailed);
+    }
+
+    /// <summary>
+    /// Ekranda iki satıra sarılmış tek cümleyi ("...he was running\ndown Broadway...") tek satır yapar. Google satır
+    /// sonunu cümle sonu sayıp her satırı ayrı çeviriyordu ("in no\ntime." → "...sokacaksınız\nzaman."). Sonraki satır
+    /// konuşmacı işaretiyle (- ya da >>) başlıyorsa ayrı konuşmadır; satır sonu korunur.
+    /// </summary>
+    internal static string JoinWrappedLines(string text)
+    {
+        var lines = text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (lines.Length < 2) return text;
+        var joined = new StringBuilder(lines[0]);
+        var previous = lines[0];
+        foreach (var line in lines.Skip(1))
+        {
+            // Tire yalnız önceki satır cümleyi bitirdiyse konuşmacı işaretidir; yarım cümlenin ortasında okunan tire
+            // yazı tanıma artığıdır ("There's a\n- locksmith up the street!") ve atılır.
+            var finished = previous.TrimEnd('"', '\'', '”', '’', ' ') is { Length: > 0 } end && ".!?…".Contains(end[^1]);
+            if (PrefixRegex.IsMatch(line) && finished) joined.Append('\n').Append(line);
+            else joined.Append(' ').Append(PrefixRegex.Replace(line, ""));
+            previous = line;
+        }
+        return joined.ToString();
     }
 
     private static string? ParseTranslationJson(string json)

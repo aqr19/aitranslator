@@ -1,6 +1,22 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Find the subtitles automatically": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find the subtitles automatically"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Altyazıyı kendiliğinden bul"
+          }
+        }
+      }
+    },
     "One-Time Setup": {
       "localizations": {
         "en": {
@@ -13,6 +29,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tek Seferlik Kurulum"
+          }
+        }
+      }
+    },
+    "The app finds where the game shows its subtitles by itself and ignores menus, hints and on-screen indicators. Turn this off to draw the area yourself.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The app finds where the game shows its subtitles by itself and ignores menus, hints and on-screen indicators. Turn this off to draw the area yourself."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uygulama oyunun altyazıyı gösterdiği yeri kendisi bulur; menüleri, ipuçlarını ve ekrandaki göstergeleri yok sayar. Alanı kendin çizmek için bunu kapat."
           }
         }
       }

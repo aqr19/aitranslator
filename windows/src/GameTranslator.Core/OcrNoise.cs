@@ -18,6 +18,7 @@ public static partial class OcrNoise
 
     public static string Clean(string line)
     {
+        line = FixSpeaker(line);
         var kept = new List<string>();
         var tokens = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
         for (var index = 0; index < tokens.Length; index++)
@@ -48,8 +49,131 @@ public static partial class OcrNoise
         // Altyazının yanındaki göstergenin sayısı satırın başına yapışıyor ("9? We'll lose", "100. Mac and John").
         // Mesafe işareti de öyle ("23m CESARE: Here!"). Tek başına sayı ve ardından büyük harfle başlayan cümle: sayı atılır.
         if (kept.Count >= 3 && LeadingNumber().IsMatch(kept[0]) && char.IsUpper(kept[1][0])) kept.RemoveAt(0);
-        return string.Join(' ', kept);
+        return FixLineEnd(string.Join(' ', kept));
     }
+
+    /// <summary>
+    /// Konuşmacı adı ile iki nokta arasındaki küçük simge (Spider-Man 2'de adın yanındaki maske) harf sanılıyor:
+    /// "Spider-Man •g: You'll…", "Spider-Man O: No comment." → "Spider-Man: …". Ad büyük harfle başlayan en çok üç
+    /// sözcüktür; simge ya bir işaretle başlayan en çok üç karakter ya da tek başına yuvarlak bir harftir.
+    /// </summary>
+    [GeneratedRegex(@"^(?<name>\p{Lu}[\p{L}.'’-]+(?: \p{Lu}[\p{L}.'’-]+){0,2}) (?:(?=[^\s:;]{0,2}[^\p{L}\d\s:;])[^\s:;]{1,3}|[Oo0])\s*[:;]")]
+    private static partial Regex SpeakerIcon();
+
+    [GeneratedRegex(@"^(?<name>\p{Lu}\p{L}[\p{L}.’'-]*(?<![’'])(?: \p{Lu}\p{L}[\p{L}.’'-]*(?<![’'])){0,2}):(?=\s|$)")]
+    private static partial Regex SpeakerLabel();
+
+    /// <summary>Düzgün okunmuş hâli görülen konuşmacı adları ("Spider-Man:") ve kaç kez görüldükleri.</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> Speakers = new(StringComparer.Ordinal);
+    private const int MaxSpeakers = 200;
+
+    internal static void ForgetSpeakers() => Speakers.Clear();
+
+    /// <summary>
+    /// Konuşmacı adının yanındaki simge her karede başka okunur ("so:", "S'.", "'2':", "v:") ya da iki noktayı yutar
+    /// ("Spider-Man BOOM!"). Adı en az iki kez düzgün okunmuş konuşmacıda ad ile söz arasındaki en çok üç karakterlik
+    /// parça atılır, iki nokta eksikse eklenir. Tanınmayan adlara dokunulmaz ("Guard 2:", "Listen up:").
+    /// </summary>
+    private static string FixSpeaker(string line)
+    {
+        line = SpeakerIcon().Replace(line, "${name}:");
+        if (SpeakerLabel().Match(line) is { Success: true } label)
+        {
+            var read = label.Groups["name"].Value;
+            // Henüz tanınmayan ad, tanınan bir adın tek harf farklı okumasıysa ("Spider-Mam:") o addır.
+            if (!(Speakers.TryGetValue(read, out var times) && times >= 2) &&
+                Speakers.Where(pair => pair.Value >= 2).Select(pair => pair.Key).FirstOrDefault(known => Misread(read, known, 1)) is { } real)
+                return real + line[read.Length..];
+            if (Speakers.Count < MaxSpeakers || Speakers.ContainsKey(read))
+                Speakers.AddOrUpdate(read, 1, (_, seen) => seen + 1);
+            return line;
+        }
+        foreach (var name in Speakers.Where(pair => pair.Value >= 2).Select(pair => pair.Key).OrderByDescending(key => key.Length))
+        {
+            if (line.StartsWith(name + " ", StringComparison.Ordinal))
+                return WithSpeaker(name, line[(name.Length + 1)..].TrimStart()) ?? line;
+            // Adın kendisi bozuk okunmuş ya da simge ada yapışmış: "pider-Man What…", "Spider-Mame•: Wish…".
+            var count = name.Count(c => c == ' ') + 2;
+            var words = line.Split(' ', count, StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length != count) continue;
+            var head = string.Join(' ', words[..^1]);
+            var core = new string(head.Reverse().SkipWhile(c => !char.IsLetterOrDigit(c)).Reverse().ToArray());
+            var marked = core.Length < head.Length;
+            var same = core == name;
+            if (!same && !Misread(core, name, name.Length >= 9 ? 2 : 1)) continue;
+            if (same && !marked) continue;
+            if (head.EndsWith(':')) return name + ": " + words[^1];
+            if (WithSpeaker(name, words[^1]) is { } repaired) return repaired;
+        }
+        return line;
+    }
+
+    /// <summary>
+    /// Bu uzunluğun altındaki ad benzerlikle onarılmaz: kısa adlar birbirine ve sıradan sözcüklere fazla yakındır
+    /// ("Rio", "Marko"; "Father" ile "Mother" arasında yalnız iki harf var).
+    /// </summary>
+    private const int MinFuzzyName = 7;
+
+    /// <summary><paramref name="read"/>, <paramref name="name"/> adının en çok <paramref name="limit"/> harf farklı okuması mı (çoğul eki sayılmaz).</summary>
+    private static bool Misread(string read, string name, int limit) =>
+        name.Length >= MinFuzzyName && read != name && read != name + "s" && name != read + "s" &&
+        Math.Abs(read.Length - name.Length) <= limit && Distance(read, name) <= limit;
+
+    /// <summary>
+    /// Addan sonraki kısım konuşmaysa "Ad: konuşma". Baştaki en çok üç karakterlik simge çöpü ("so:", "S'.", "04:")
+    /// atılır; iki nokta yoksa ve söz büyük harfle başlıyorsa eklenir. Konuşmaya benzemiyorsa ("Spider-Man is here.") null.
+    /// </summary>
+    private static string? WithSpeaker(string name, string rest)
+    {
+        // İki nokta (ya da öyle okunan ";") hemen baştaysa öncesi simge çöpüdür: "so:", "s i:", "•e;", "04:".
+        var mark = rest.IndexOfAny([':', ';']);
+        if (mark is > 0 and <= 5)
+        {
+            var junk = rest[..mark];
+            var longestWord = junk.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(part => part.Count(char.IsLetter)).DefaultIfEmpty(0).Max();
+            var loneDigit = junk.Trim().Length == 1 && char.IsDigit(junk.Trim()[0]);
+            if (longestWord < 3 && !loneDigit) return name + ": " + rest[(mark + 1)..].TrimStart();
+        }
+        var space = rest.IndexOf(' ');
+        if (space > 0 && rest[space - 1] == '.')
+        {
+            var core = rest[..(space - 1)];
+            var symbol = core.Any(c => !char.IsLetterOrDigit(c));
+            if (core.Length is >= 1 and <= 3 && (symbol || char.IsLower(core[0]))) return name + ":" + rest[space..];
+        }
+        // Harf içermeyen kısa parça ("\"", "•", "' •") iki noktanın yerine okunmuş simgedir.
+        if (space is > 0 and <= 3 && !rest[..space].Any(char.IsLetterOrDigit))
+            return name + ": " + rest[(space + 1)..].TrimStart();
+        return rest.Length > 0 && char.IsUpper(rest[0]) ? name + ": " + rest : null;
+    }
+
+    /// <summary>Düzenleme uzaklığı (ekleme, silme, değiştirme).</summary>
+    private static int Distance(string a, string b)
+    {
+        var previous = Enumerable.Range(0, b.Length + 1).ToArray();
+        for (var i = 1; i <= a.Length; i++)
+        {
+            var current = new int[b.Length + 1];
+            current[0] = i;
+            for (var j = 1; j <= b.Length; j++)
+                current[j] = Math.Min(Math.Min(current[j - 1], previous[j]) + 1, previous[j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1));
+            previous = current;
+        }
+        return previous[b.Length];
+    }
+
+    /// <summary>
+    /// Cümle sonuna yapışan çöp: yazı tanıma sondaki noktadan sonra bir iki harf uyduruyor ("Focus.ie", "now.l.") ve
+    /// üç noktayı alt tırnakla okuyor ("me„.", "kidding.„"). Kısaltmalar ("p.m", "e.g") korunur: noktadan önce en az üç harf aranır.
+    /// </summary>
+    private static string FixLineEnd(string line) =>
+        TrailingJunk().Replace(LowQuoteDots().Replace(line, "..."), "");
+
+    [GeneratedRegex(@"(?<=\p{L}{3}[.!?…])\p{Ll}{1,2}[.?]?$")]
+    private static partial Regex TrailingJunk();
+
+    [GeneratedRegex(@"\.„\.?|„\.")]
+    private static partial Regex LowQuoteDots();
 
     [GeneratedRegex(@"^\d+(?:m|km|ft|yd)?[.?!:;]?$")]
     private static partial Regex LeadingNumber();

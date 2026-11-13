@@ -195,6 +195,33 @@ public class SubtitlePipelineTests
         }
     }
 
+    /// Konuşmacı adı bir karede okunup ötekinde kaçınca aynı çeviri iki kez (adlı ve adsız) gösteriliyordu.
+    [Fact]
+    public async Task RereadWithoutTheSpeakerNameIsNotANewLine()
+    {
+        var sender = new FakeSender();
+        var pipeline = new SubtitlePipeline(
+            new FakeReader("Kraven: But you sensed nothing.", "Kraven: But you sensed nothing.", "But you sensed nothing.", "But you sensed nothing.",
+                "Kraven: But you sensed nothing."),
+            new TurkishTranslator(), sender);
+        var log = new List<string>();
+        pipeline.Log = log.Add;
+        pipeline.PackLookup = _ => null;
+        pipeline.CleanWait = 0;
+        pipeline.PackWait = 0;
+        await Run(pipeline, 5);
+        Assert.True(sender.Sent.Distinct().SequenceEqual(["Kraven: Ama hiçbir şey hissetmedin."]),
+            $"gönderilen: [{string.Join(" | ", sender.Sent)}]\n{string.Join("\n", log)}");
+        Assert.Contains(log, line => line.StartsWith("yeniden-okuma: \"But you sensed nothing.\"", StringComparison.Ordinal));
+    }
+
+    /// <summary>Kaynağa benzemeyen çeviri verir ("TR: …" uzun satırda "zaten hedef dilde" sayılıyor).</summary>
+    private sealed class TurkishTranslator : ITextTranslator
+    {
+        public Task<string> TranslateAsync(string text, CancellationToken cancellationToken = default) =>
+            Task.FromResult(text.StartsWith("Kraven:", StringComparison.Ordinal) ? "Kraven: Ama hiçbir şey hissetmedin." : "Ama hiçbir şey hissetmedin.");
+    }
+
     [Fact]
     public async Task StableTextIsTranslatedAndSentOnce()
     {

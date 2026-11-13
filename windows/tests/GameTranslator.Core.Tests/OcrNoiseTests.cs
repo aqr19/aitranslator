@@ -14,6 +14,68 @@ public class OcrNoiseTests
     [InlineData("He left 3e, at dawn.", "He left, at dawn.")]
     public void GarbledWordsAreRemoved(string line, string expected) => Assert.Equal(expected, OcrNoise.Clean(line));
 
+    /// Konuşmacı adının yanındaki simge harf sanılıyordu (Spider-Man 2).
+    [Theory]
+    [InlineData("Spider-Man •g: You'll whip him into shape in no", "Spider-Man: You'll whip him into shape in no")]
+    [InlineData("Spider-Man •u: We got a sandy situation,", "Spider-Man: We got a sandy situation,")]
+    [InlineData("Spider-Man O: No comment.", "Spider-Man: No comment.")]
+    [InlineData("Spider-Man \": So", "Spider-Man: So")]
+    [InlineData("Norman Osborn +: We're ready.", "Norman Osborn: We're ready.")]
+    [InlineData("Kraven s•: Only one way to find out...", "Kraven: Only one way to find out...")]
+    [InlineData("Kraven s': special coming up!", "Kraven: special coming up!")]
+    [InlineData("MJ: Good luck.", "MJ: Good luck.")]
+    [InlineData("Norman Osborn: It will work.", "Norman Osborn: It will work.")]
+    [InlineData("Guard 2: Halt!", "Guard 2: Halt!")]
+    [InlineData("He said O: nothing", "He said O: nothing")]
+    public void SpeakerIconIsRemoved(string line, string expected) => Assert.Equal(expected, OcrNoise.Clean(line));
+
+    /// Simge her karede başka okunuyor; adı iki kez düzgün görülen konuşmacıda temizlenir.
+    [Fact]
+    public void KnownSpeakerLosesIconJunkAndGetsItsColon()
+    {
+        OcrNoise.ForgetSpeakers();
+        // Ad henüz tanınmıyor: dokunulmaz.
+        Assert.Equal("Spider-Man so: Look out!", OcrNoise.Clean("Spider-Man so: Look out!"));
+        OcrNoise.Clean("Spider-Man: Yeah.");
+        OcrNoise.Clean("Spider-Man: How?");
+        Assert.Equal("Spider-Man: Look out!", OcrNoise.Clean("Spider-Man so: Look out!"));
+        Assert.Equal("Spider-Man: I'll keep the water flowing", OcrNoise.Clean("Spider-Man v: I'll keep the water flowing"));
+        Assert.Equal("Spider-Man: He water.", OcrNoise.Clean("Spider-Man S'. He water."));
+        Assert.Equal("Spider-Man: Woo! He felt that alright...", OcrNoise.Clean("Spider-Man '2': Woo! He felt that alright..."));
+        Assert.Equal("Spider-Man: BOOM!", OcrNoise.Clean("Spider-Man BOOM!"));
+        Assert.Equal("Spider-Man: Somebody order some water?", OcrNoise.Clean("Spider-Man Somebody order some water?"));
+        Assert.Equal("Spider-Man: No. Stop.", OcrNoise.Clean("Spider-Man No. Stop."));
+        Assert.Equal("Spider-Man is here.", OcrNoise.Clean("Spider-Man is here."));
+        Assert.Equal("Sandman so: Leave me alone!", OcrNoise.Clean("Sandman so: Leave me alone!"));
+        // Simge "S'" ikinci ad sanılmasın; iki basamaklı sayı da simge çöpüdür.
+        Assert.Equal("Spider-Man: Keep it moving, Miles.", OcrNoise.Clean("Spider-Man S': Keep it moving, Miles."));
+        Assert.Equal("Spider-Man: I'd get into any college I wanted.", OcrNoise.Clean("Spider-Man 04: I'd get into any college I wanted."));
+        // Adın kendisi bozuk okunmuş ya da simge ada yapışmış.
+        Assert.Equal("Spider-Man: What happened?", OcrNoise.Clean("pider-Man What happened?"));
+        Assert.Equal("Spider-Man: Wish I could just write about this", OcrNoise.Clean("Spider-Mame•: Wish I could just write about this"));
+        Assert.Equal("Spider-Man: I'd get into any college I wanted...", OcrNoise.Clean("Spider-Mande I'd get into any college I wanted..."));
+        Assert.Equal("Spider-Man: STAY INSIDE!", OcrNoise.Clean("Spider-Mam: STAY INSIDE!"));
+        Assert.Equal("Spider-Man: You're only making it worse", OcrNoise.Clean("ider-Man V: You're only making it worse"));
+        Assert.Equal("Spider-Man: everywhere.", OcrNoise.Clean("Spider-Man •e; everywhere."));
+        Assert.Equal("Spider-Man: Marko... it's gonna be okay.", OcrNoise.Clean("Spider-Man \" Marko... it's gonna be okay."));
+        Assert.Equal("Spider-Man: Come for us?", OcrNoise.Clean("Spider-Man s i: Come for us?"));
+        // Benzemeyen ya da konuşma gibi sürmeyen satıra dokunulmaz.
+        Assert.Equal("Spiderrtvlanis OThat water tank's our only shot.", OcrNoise.Clean("Spiderrtvlanis OThat water tank's our only shot."));
+        Assert.Equal("Spider-Men are everywhere now.", OcrNoise.Clean("Spider-Men are everywhere now."));
+        OcrNoise.ForgetSpeakers();
+    }
+
+    /// Cümle sonuna yapışan çöp ve alt tırnak olarak okunan üç nokta.
+    [Theory]
+    [InlineData("Brainstorm later, Miles. Focus.ie", "Brainstorm later, Miles. Focus.")]
+    [InlineData("Actually it's his now.l.", "Actually it's his now.")]
+    [InlineData("I know you're angry at me„.", "I know you're angry at me...")]
+    [InlineData("MJ wasnt kidding.„ we gotta help", "MJ wasnt kidding... we gotta help")]
+    [InlineData("Meet me at 5 p.m", "Meet me at 5 p.m")]
+    [InlineData("Is that so?", "Is that so?")]
+    [InlineData("Wait...", "Wait...")]
+    public void LineEndJunkIsRemoved(string line, string expected) => Assert.Equal(expected, OcrNoise.Clean(line));
+
     [Theory]
     [InlineData("Turn on the PS5 now.")]
     [InlineData("Hold R2-D2 still.")]
