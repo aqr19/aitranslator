@@ -87,6 +87,8 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
     {
         var first = after.FirstOrDefault(char.IsLetter);
         if (first == default) return false;
+        // Gösterge ve sayaç yazıları ("19m", "x3") söz değildir; birbirine eklenmez.
+        if (!IsSpeech(before) || !IsSpeech(after)) return false;
         // Sondaki tırnak ve yazı tanıma artıkları ("wait--'") sayılmaz.
         var trimmed = before.TrimEnd().TrimEnd('\'', '"', '’', '”', '`', ' ');
         // Küçük harfle başlayan satır her zaman bir öncekinin devamıdır ("...need help..." → "when they come for you.").
@@ -95,6 +97,13 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
         // "Sergei."). Noktalamasız biten satırdan sonra gelen büyük harfli satır çoğunlukla başka bir yazıdır
         // ("PRESS X TO CONTINUE" → "LEVEL 2"), "--" ile kesilen sözden sonra gelen de başka bir cümledir.
         return trimmed.EndsWith(',') || trimmed.EndsWith(';');
+    }
+
+    /// <summary>En az iki harfli bir sözcüğü olan ve rakamla başlamayan yazı.</summary>
+    private static bool IsSpeech(string text)
+    {
+        var trimmed = text.TrimStart();
+        return trimmed.Length > 0 && !char.IsDigit(trimmed[0]) && text.Count(char.IsLetter) >= 3;
     }
 
     /// <summary>Söz açık mı kaldı: cümle sonu işaretiyle bitmiyor ya da üç noktayla asılı ("I thought you were…").</summary>

@@ -158,6 +158,8 @@ public sealed class Reading
         if (words.Count is 0 or > 5) return words.Count == 0;
         var letters = trimmed.Where(char.IsLetter).ToList();
         if (letters.All(char.IsUpper)) return true;
+        // Mesafe ve sayaç göstergeleri ("19m", "12 m", "x3"): rakam ve en çok iki harf.
+        if (letters.Count <= 2 && trimmed.Any(char.IsDigit)) return true;
         if (words.Count < 2) return false;
         return words.All(word => SmallWords.Contains(word) || char.IsUpper(word.First(char.IsLetter)));
     }
