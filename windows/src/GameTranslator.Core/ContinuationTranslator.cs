@@ -13,7 +13,7 @@ namespace GameTranslator.Core;
 /// Ayrıca aynı okumada iki kez gelen satırı ("A fate you will not share." alt alta iki kez) teke indirir.
 /// Kendi durumunu tutar; başka bir çevirmeni sarar.
 /// </summary>
-public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<long>? clock = null) : ITextTranslator
+public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<long>? clock = null, Func<string, bool>? looksMisread = null) : ITextTranslator
 {
     /// <summary>Önceki parçadan en çok bu kadar sonra gelen satır onun devamı sayılabilir.</summary>
     public const int WithinMs = 8000;
@@ -83,12 +83,14 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
     }
 
     /// <summary>Önceki parça cümleyi bitirmediyse ya da yeni parça küçük harfle başlıyorsa devamdır.</summary>
-    private static bool Continues(string before, string after)
+    private bool Continues(string before, string after)
     {
         var first = after.FirstOrDefault(char.IsLetter);
         if (first == default) return false;
         // Gösterge ve sayaç yazıları ("19m", "x3") söz değildir; birbirine eklenmez.
         if (!IsSpeech(before) || !IsSpeech(after)) return false;
+        // Bozuk okunmuş parçalar birbirine eklenmez (anlamsız parçalar zincir olup uzuyordu).
+        if (looksMisread is not null && (looksMisread(before) || looksMisread(after))) return false;
         // Sondaki tırnak ve yazı tanıma artıkları ("wait--'") sayılmaz.
         var trimmed = before.TrimEnd().TrimEnd('\'', '"', '’', '”', '`', ' ');
         // Küçük harfle başlayan satır her zaman bir öncekinin devamıdır ("...need help..." → "when they come for you.").

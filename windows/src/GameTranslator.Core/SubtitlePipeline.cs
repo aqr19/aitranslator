@@ -43,6 +43,8 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
     /// satırlardan oluşan okuma atılır (<see cref="Reading.WithoutHeadings"/>). Uygulama açar.
     /// </summary>
     public bool TidySpeakersAndHeadings { get; set; }
+    /// <summary>Okuma çevrilemeyecek kadar bozuk mu (uygulama yazım denetimiyle verir); null ise hiçbir okuma atılmaz.</summary>
+    public Func<string, bool>? IsGarbage { get; set; }
     public int CleanWait { get; set; } = CleanWaitMs;
     /// <summary>Okuma bozuk mu (bekletilecek mi); uygulama yazım denetimiyle daha iyisini verebilir.</summary>
     public Func<string, bool> LooksMisread { get; set; } = text => PackFuzzy.Damaged(text) || (ExtraMisreadCheck?.Invoke(text) ?? false);
@@ -54,6 +56,8 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
     /// </summary>
     public Func<string, int> ReadingScore { get; set; } = text => (ExtraReadingScore ?? OcrNoise.Score)(text);
     public static Func<string, int>? ExtraReadingScore { get; set; }
+    /// <summary>Uygulamanın verdiği "çevrilemeyecek kadar bozuk" ölçüsü (Windows'ta yazım denetimi); bkz. <see cref="IsGarbage"/>.</summary>
+    public static Func<string, bool>? ExtraGarbageCheck { get; set; }
     /// <summary>Çevrilen satırın daha iyi olmayan yeniden okuması bu süre içinde yeni satır sayılmaz.</summary>
     public const int RereadWithinMs = 4000;
     private const int RememberedPairs = 8;
@@ -512,6 +516,13 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
     /// <returns>Kilit bırakıldıktan sonra çağrılacak olaylar (paketten gelen satır).</returns>
     private Action? Enqueue(string source, TextBox? box, ReadInfo? read = null)
     {
+        // Bekleme süresinde düzgünü gelmeyen, sözcüklerinin çoğu gerçek olmayan okuma hiç çevrilmez: anlamsız bir
+        // Türkçe satır göstermektense o satırı kaçırmak yeğdir (düzgün okuması gelirse o gösterilir).
+        if (IsGarbage?.Invoke(source) == true && PackLookup?.Invoke(source) is null)
+        {
+            Write($"çöp: {SubtitleLog.Excerpt(source)} okunamadı, çevrilmedi");
+            return null;
+        }
         var request = new Request(++lastRequested, source, box, session) { Read = read ?? currentRead ?? new ReadInfo(now(), null, null) };
         lineOnScreen = request.Number;
         lastSent = (source, ReadingScore(source), now());

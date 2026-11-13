@@ -62,6 +62,31 @@ public sealed class Misspelling(Func<string, bool> isWord)
     /// <summary>Satırda gerçek olmayan sözcük var mı (daha iyi bir okuma beklemeye değer mi).</summary>
     public bool LooksMisread(string text) => Measure(text).Bad > 0;
 
+    /// <summary>
+    /// Okuma çevrilemeyecek kadar bozuk mu: harflerinin üçte birinden çoğu gerçek olmayan sözcüklerde. Tek tük bozuk
+    /// sözcüğü olan uzun cümle ("I don't caryif I'm called…") çevrilir; "There Ogedto egey billior f ug." çevrilmez.
+    /// </summary>
+    public bool IsGarbage(string text)
+    {
+        var (bad, all) = Measure(text);
+        return all >= 6 && bad * 3 > all;
+    }
+
+    /// <summary>
+    /// Cümlenin başı okunamamış parça mı: küçük harfle başlar, konuşmacı adı yoktur ve bir önceki satır cümlesini
+    /// bitirmiştir ("…at will," gibi açık kalmış bir satırın devamı değildir). Yazı belirirken ya da solarken yazı
+    /// tanıma satırın yalnız sonunu okur ("bad at surrendering.", "round."); tamamı bir sonraki karede gelir.
+    /// </summary>
+    public static bool IsOrphanFragment(string text, string? previous)
+    {
+        var first = text.TrimStart().FirstOrDefault(c => char.IsLetter(c) || char.IsDigit(c));
+        if (!char.IsLower(first)) return false;
+        if (previous is null) return true;
+        var before = previous.TrimEnd().TrimEnd('\'', '"', '’', '”');
+        // Önceki satır açık kaldıysa küçük harfle başlayan satır onun devamıdır.
+        return before.Length == 0 || ".!?".Contains(before[^1]) && !before.EndsWith("...", StringComparison.Ordinal);
+    }
+
     /// <summary>Okuma puanı: <see cref="OcrNoise.Score"/> eksi bozuk sözcüklerin harflerinin üç katı.</summary>
     public int Score(string text) => OcrNoise.Score(text) - (3 * Measure(text).Bad);
 }

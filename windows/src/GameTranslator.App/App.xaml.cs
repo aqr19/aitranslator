@@ -47,6 +47,7 @@ public partial class App : Application
         var misspelling = new Misspelling(spelling.IsWord);
         SubtitlePipeline.ExtraMisreadCheck = misspelling.LooksMisread;
         SubtitlePipeline.ExtraReadingScore = misspelling.Score;
+        SubtitlePipeline.ExtraGarbageCheck = misspelling.IsGarbage;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]

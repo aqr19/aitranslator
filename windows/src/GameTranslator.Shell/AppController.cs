@@ -979,7 +979,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         OcrMissing = reader is null || !services.HasOcrLanguage(settings.SourceLanguage);
         if (reader is null) return;
         // Art arda altyazılara bölünen cümle bütün olarak çevrilir (hangi motor seçilirse seçilsin).
-        var built = new SubtitlePipeline(reader, new ContinuationTranslator(MakeTranslator()), server, new ReadScheduler());
+        var built = new SubtitlePipeline(reader, new ContinuationTranslator(MakeTranslator(), looksMisread: text => SubtitlePipeline.ExtraMisreadCheck?.Invoke(text) ?? false), server, new ReadScheduler());
         // Paket yalnız oynanan oyunun paketiyse kullanılır (başka oyunun genel satırları yanlış çeviri basıyordu).
         var packGate = new PackGate();
         built.PackLookup = text => packGate.Filter(text, CommunityPatchManager.Shared.Match(text));
@@ -993,6 +993,12 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         // Aynı okuma yinelenirse (yazı tanıma satırı hep böyle okuyor) beklemenin kalanı atlanır.
         built.SettledRelease = SubtitlePipeline.SettledAfterMs;
         built.TidySpeakersAndHeadings = true;
+        // Cümlenin başı okunamamış parça ("bad at surrendering.") bozuk okumadır: tamamı gelsin diye bekletilir;
+        // çok kısaysa ya da sözcüklerinin çoğu gerçek değilse hiç çevrilmez.
+        var misread = built.LooksMisread;
+        built.LooksMisread = text => misread(text) || Misspelling.IsOrphanFragment(text, built.LastPair?.Source);
+        built.IsGarbage = text => (SubtitlePipeline.ExtraGarbageCheck?.Invoke(text) ?? false) ||
+            (Misspelling.IsOrphanFragment(text, built.LastPair?.Source) && text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length <= 3);
         // Altyazı günlüğü (altyazi.log): okunan satırlar ve akıbetleri; gösterilen çevirinin kendisi de yazılır.
         built.Log = SubtitleLog.Write;
         built.PairShown += (source, translation) =>

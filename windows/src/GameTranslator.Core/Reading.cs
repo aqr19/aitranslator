@@ -237,7 +237,9 @@ public static class ButtonPrompts
         // "Press ✕ to jump", "Hold R2 to aim"; düğme simgesi harf olmayan bir işarete dönüşebilir ("PRESS @ TO CONTINUE").
         if (Verbs.Contains(first) && tokens.Count is >= 2 and <= 10)
             return Buttons.Contains(tokens[1]) || Lookalikes.Contains(tokens[1]) || MisreadButtons.Contains(tokens[1]) ||
-                   (tokens[1].Length <= 2 && !tokens[1].Any(char.IsLetterOrDigit));
+                   (tokens[1].Length <= 2 && !tokens[1].Any(char.IsLetterOrDigit)) ||
+                   // "PRESS e TO CONTINUE": düğme simgesi tek harf okunmuş, ardından "to" geliyor.
+                   (tokens.Count >= 4 && tokens[1].Length <= 2 && string.Equals(tokens[2], "to", StringComparison.OrdinalIgnoreCase));
         return false;
     }
 }
