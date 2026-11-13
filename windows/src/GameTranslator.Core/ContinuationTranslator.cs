@@ -52,11 +52,24 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
                 source = $"{known}: {body}";
             }
         }
+        // Ekranda iki üç satıra sarılmış söz tek cümledir; satır başında konuşmacı tiresi varsa ayrı konuşmalardır.
+        if (body.Contains('\n'))
+        {
+            var rows = body.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (!rows.Skip(1).Any(row => row.StartsWith('-') || row.StartsWith('–') || row.StartsWith('—') || row.StartsWith(">>", StringComparison.Ordinal)))
+            {
+                body = string.Join(' ', rows);
+                source = speaker is null ? body : $"{speaker}: {body}";
+            }
+        }
         var request = source;
         var whole = body;
-        if (previous is { } last && at - last.At <= WithinMs && !source.Contains('\n') && !last.Body.Contains('\n') &&
-            (speaker is null || speaker == last.Speaker) && Continues(last.Body, body) && !SameLine(last.Raw, source) &&
-            last.Body.Length + body.Length + 1 <= MaxLength)
+        // Aynı konuşmacı adıyla gelen satır, önceki söz cümleyi bitirmediyse ya da üç noktayla asılı kaldıysa onun
+        // devamıdır; büyük harfle (özel adla) başlasa bile ("…in the caves beneath" → "Kephallonia when…").
+        var sameSpeaker = speaker is not null && previous is { Speaker: { } before } && before == speaker;
+        if (previous is { } last && at - last.At <= WithinMs && !body.Contains('\n') && !last.Body.Contains('\n') &&
+            (speaker is null || speaker == last.Speaker) && (Continues(last.Body, body) || (sameSpeaker && LeftOpen(last.Body))) &&
+            !SameLine(last.Raw, source) && last.Body.Length + body.Length + 1 <= MaxLength)
         {
             whole = last.Body + " " + body;
             var label = speaker ?? last.Speaker;
@@ -82,6 +95,14 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
         // "Sergei."). Noktalamasız biten satırdan sonra gelen büyük harfli satır çoğunlukla başka bir yazıdır
         // ("PRESS X TO CONTINUE" → "LEVEL 2"), "--" ile kesilen sözden sonra gelen de başka bir cümledir.
         return trimmed.EndsWith(',') || trimmed.EndsWith(';');
+    }
+
+    /// <summary>Söz açık mı kaldı: cümle sonu işaretiyle bitmiyor ya da üç noktayla asılı ("I thought you were…").</summary>
+    private static bool LeftOpen(string before)
+    {
+        var trimmed = before.TrimEnd().TrimEnd('\'', '"', '’', '”', '`', ' ');
+        if (trimmed.Length == 0 || trimmed.EndsWith("--", StringComparison.Ordinal) || trimmed.EndsWith('—')) return false;
+        return trimmed.EndsWith("...", StringComparison.Ordinal) || trimmed.EndsWith('…') || !".!?".Contains(trimmed[^1]);
     }
 
     /// <summary>Okunan ad, bilinen adın birkaç harfi eksik ya da yanlış hâli mi ("anke", "Gankc" → "Ganke").</summary>

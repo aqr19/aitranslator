@@ -194,7 +194,10 @@ public sealed class SubtitleServer(int port = 8787, TimeSpan? pingInterval = nul
         };
         if (paragraphs) json["paragraphs"] = true;
         if (replaces) json["replace"] = true;
-        if (box is { } b) json["box"] = BoxJson(b);
+        SubtitleStyle? style;
+        lock (gate) style = lastStyle;
+        // Örtme yerleşiminde zemin tek parça olsun diye kutu çevirinin sığacağı kadar büyütülür.
+        if (box is { } b) json["box"] = BoxJson(style is { Placement: SubtitlePlacement.Cover } && !paragraphs ? CoverFit.Box(b, text, style.FontSize) : b);
         Broadcast(Frame("subtitle", json), subtitle: true);
         EventSent?.Invoke(new SubtitleEvent(SubtitleEventKind.Subtitle, text, durationMs, paragraphs, replaces));
     }
@@ -461,16 +464,21 @@ public sealed class SubtitleServer(int port = 8787, TimeSpan? pingInterval = nul
         catch (SocketException) { }
     }
 
+    /// <summary>
+    /// Örtme yerleşiminde TV iki zemin çizer: İngilizce altyazıyı örten kutu ve çevirinin kendi zemini. Boyları farklı
+    /// olduğu için arkada iki ayrı çubuk görünüyordu. Çevirinin kendi zemini kapatılır (yalnız örtü kalır), önceki
+    /// satır da üstüne yığılmaz; örtü kutusu çeviriye göre büyütülür (<see cref="CoverFit"/>).
+    /// </summary>
     private static string StyleFrame(SubtitleStyle style) =>
         Frame("style", new SortedDictionary<string, object>
         {
-            ["background"] = Math.Clamp(style.Background, 0, 100),
+            ["background"] = style.Placement == SubtitlePlacement.Cover ? 0 : Math.Clamp(style.Background, 0, 100),
             ["bold"] = style.Bold,
             ["bottomPercent"] = style.BottomPercent,
             ["displayMode"] = style.DisplayMode == TvDisplayMode.Overlay ? "overlay" : "inApp",
             ["fontSize"] = style.FontSize,
             ["placement"] = style.Placement.ToString().ToLowerInvariant(),
-            ["stackPrevious"] = style.StackPrevious,
+            ["stackPrevious"] = style.StackPrevious && style.Placement != SubtitlePlacement.Cover,
             ["textColor"] = style.TextColor.ToString().ToLowerInvariant(),
         });
 

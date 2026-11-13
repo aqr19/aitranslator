@@ -91,6 +91,22 @@ public class ContinuationTranslatorTests
         Assert.Equal("Spider-Man: Oh man - you think he's mad at me?", seen[5]);
     }
 
+    /// Aynı konuşmacının açık kalan sözü, devamı büyük harfle (özel adla) başlasa da birleşir; sarılmış satırlar da.
+    [Fact]
+    public async Task SameSpeakerOpenSentenceJoinsEvenWithACapitalAndWrappedLines()
+    {
+        var seen = await Feed(
+            ("Priestess: The carvings say the spear was hidden in\nthe caves beneath", 0),
+            ("Priestess: Kephallonia when the temple was built!", 3000),
+            ("Elena: I thought you were...", 9000),
+            ("Elena: Never mind what I thought.", 11000),
+            ("Elena: We leave at dawn.", 14000));
+        Assert.Equal("Priestess: The carvings say the spear was hidden in the caves beneath Kephallonia when the temple was built!", seen[1]);
+        Assert.Equal("Elena: I thought you were... Never mind what I thought.", seen[3]);
+        // Biten cümleden sonra gelen yeni cümle birleşmez.
+        Assert.Equal("Elena: We leave at dawn.", seen[4]);
+    }
+
     [Fact]
     public async Task MisreadSpeakerNameIsNotPartOfTheSentence()
     {
