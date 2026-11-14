@@ -112,9 +112,6 @@ public sealed class SubtitleServer(int port = 8787, TimeSpan? pingInterval = nul
 
     private readonly object gate = new();
     private readonly List<Client> clients = [];
-
-    /// <summary>Oyunun altyazısının satır yüksekliğini (karenin yüksekliğine oranla) veren işlev; uygulama bağlar.</summary>
-    public Func<double?>? LineHeight { get; set; }
     private TcpListener? listener;
     private Timer? pingTimer;
     private SubtitleStyle? lastStyle;
@@ -205,14 +202,6 @@ public sealed class SubtitleServer(int port = 8787, TimeSpan? pingInterval = nul
         {
             var cover = style is { Placement: SubtitlePlacement.Cover } && !paragraphs;
             json["box"] = BoxJson(cover ? CoverFit.Box(b, text, style!.FontSize) : b);
-            // Oyunun altyazısının gerçek yeri. Yeni TV uygulaması çeviriyi tam bu alana sığdırır (aynı genişlik, aynı
-            // satır düzeni, yazı boyu alana göre); eski uygulama alanı tanımaz ve büyütülmüş "box"ı kullanır.
-            if (cover)
-            {
-                json["source"] = BoxJson(b);
-                // Oyunun altyazısının satır yüksekliği: çeviri ondan büyük yazılmaz.
-                if (LineHeight?.Invoke() is { } line and > 0.005 and < 0.2) json["line"] = Round(line);
-            }
         }
         Broadcast(Frame("subtitle", json), subtitle: true);
         EventSent?.Invoke(new SubtitleEvent(SubtitleEventKind.Subtitle, text, durationMs, paragraphs, replaces));

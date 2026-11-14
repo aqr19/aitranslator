@@ -136,8 +136,6 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
     public (string Source, string Translation)? LastPair { get; private set; }
     /// <summary>Son gösterilen çevirinin oyundaki altyazısının karedeki yeri.</summary>
     public TextBox? LastBox { get; private set; }
-    /// <summary>Son okunan altyazının tipik satır yüksekliği (karenin yüksekliğine oranla); hiç okunmadıysa null.</summary>
-    public double? LastLineHeight { get; private set; }
     public TranslatorStatus? LastError { get; private set; }
 
     /// <summary>Yeni çeviri gösterilince çağrılır (kaynak, çeviri).</summary>
@@ -245,10 +243,6 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
                     : $"çöp: {SubtitleLog.Excerpt(note.Text)} kararlı olmadan kalktı, gönderilmedi");
             }
             var box = reading.Box?.PlacedIn(area).CenteredOnScreen();
-            // Oyunun altyazısının satır yüksekliği (karenin yüksekliğine oranla): TV çeviriyi aynı boyda yazabilsin diye.
-            var heights = reading.Lines.Where(line => line.Box is not null)
-                .Select(line => (line.Box!.Value.Bottom - line.Box!.Value.Top) * (area.Bottom - area.Top)).Order().ToList();
-            if (heights.Count > 0) LastLineHeight = heights[heights.Count / 2];
             // Satır henüz doğrulanmadı: çevirisi şimdiden başlasın, doğrulanınca beklemeden gösterilsin.
             if (action.Kind == StabilizerKind.None && translator.Prefetches && reading.Text.Trim() is { Length: >= 6 } early && early != lastPrefetched)
             {

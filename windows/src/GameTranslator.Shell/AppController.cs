@@ -1026,7 +1026,6 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         built.TranslationResult += error => post(() => TranslatorStatus = error ?? TranslatorStatus.Ready);
         built.SpeechReady += lines => post(() => Speak(lines));
         pipeline = built;
-        server.LineHeight = () => pipeline?.LastLineHeight;
     }
 
     private ITextTranslator MakeTranslator()
