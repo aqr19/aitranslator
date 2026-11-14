@@ -16,7 +16,8 @@ public static class Program
         try { VelopackApp.Build().Run(); } catch { }
 
         // Eğer arka planda takılı kalmış eski bir kopya varsa port 8787'yi ve TV bağlantısını kilitlemesin diye sonlandır
-        try
+        // (Geliştirme araçları (--replay, --repair) kurulu uygulamanın yanında çalışır; ona dokunmaz.)
+        if (args is not (["--replay", ..] or ["--repair", ..])) try
         {
             var current = System.Diagnostics.Process.GetCurrentProcess();
             foreach (var p in System.Diagnostics.Process.GetProcessesByName("GameTranslator"))

@@ -17,6 +17,24 @@ public partial class App : Application
         // İndirilen dosyalardaki Windows Smart App Control (0xc0e90002) ve Zone.Identifier engellerini otomatik kaldır
         StartupGuard.UnblockFiles(AppContext.BaseDirectory);
 
+        // Geliştirme aracı: --repair girdi.txt çıktı.txt — her satırı Windows yazım sözlüğüyle onarır (OcrConfusions).
+        if (e.Args is ["--repair", var input, var output])
+        {
+            UseSpelling();
+            // "?" ile başlayan satır: sözcüklerin sözlükte olup olmadığı yazılır.
+            var check = SubtitlePipeline.ExtraWordCheck;
+            System.IO.File.WriteAllLines(output, System.IO.File.ReadAllLines(input).Select(line => line.StartsWith('?')
+                ? string.Join(' ', line[1..].Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(word => $"{word}={check?.Invoke(word)}"))
+                : OcrConfusions.Repair(line, check)));
+            Shutdown();
+            return;
+        }
+        if (Replay.Options.Parse(e.Args) is { } replay)
+        {
+            UseSpelling();
+            Replay.Run(this, replay);
+            return;
+        }
         var renderFolder = e.Args is ["--render-screens", var folder] ? folder : null;
         // Eksik bir DLL, onu kullanan yöntem derlenirken hata verir. Bu yüzden denetim ve yakalama burada, uygulamanın
         // kendi türlerine dokunan kod ise ayrı yöntemde (Start) durur.
