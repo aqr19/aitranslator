@@ -115,8 +115,13 @@ public sealed class LiveServices : IAppServices
         }
     }
 
+    /// <summary>Geliştirme aracı (<see cref="Replay"/>): doluysa görüntü PS5 yerine buradan gelir.</summary>
+    public static Func<IStreamSession>? ReplayStream { get; set; }
+
     public IStreamSession MakeStream(RegisteredConsole? console, byte[]? accountId, UserSettings? settings = null)
     {
+        if (ReplayStream is { } replay) return replay();
+
         if (settings?.VideoSource == VideoSourceType.DesktopScreen || settings?.VideoSource == VideoSourceType.CaptureCard)
         {
             return new DesktopCaptureStreamSession(settings?.DesktopWindowName, settings?.ScreenIndex ?? 0);
@@ -343,6 +348,7 @@ public sealed class LiveServices : IAppServices
     private static readonly string PpOcrDirectory = Path.Combine(AppPaths.Models, "ppocr");
     private static readonly object PpOcrGate = new();
     private static PpOcrReader? ppOcr;
+    private static bool ppOcrEnglish;
     private static bool ppOcrFailed;
 
     /// <summary>
@@ -353,25 +359,33 @@ public sealed class LiveServices : IAppServices
     public ITextReader? MakeSubtitleReader(string language)
     {
         var fast = WindowsOcrReader.Create(language);
-        if (fast is null || PpOcrShared() is not { } strong) return fast;
+        if (fast is null || PpOcrShared(language) is not { } strong) return fast;
         return new HybridReader(fast, strong)
         {
             LooksMisread = text => SubtitlePipeline.ExtraMisreadCheck?.Invoke(text) ?? false,
             Score = text => (SubtitlePipeline.ExtraReadingScore ?? OcrNoise.Score)(text),
+            Repair = text => OcrConfusions.Repair(text, SubtitlePipeline.ExtraWordCheck),
             Log = SubtitleLog.Write,
         };
     }
 
-    private static PpOcrReader? PpOcrShared()
+    private static PpOcrReader? PpOcrShared(string language)
     {
         lock (PpOcrGate)
         {
-            if (ppOcr is not null || ppOcrFailed) return ppOcr;
-            if (!PpOcrReader.IsInstalled(PpOcrDirectory)) return null;
+            // Oyun dili İngilizceye (ya da İngilizceden) değiştiyse okuyucu ek modelle (ya da onsuz) yeniden kurulur.
+            var english = PpOcrReader.HasEnglish(PpOcrDirectory, language);
+            if (ppOcr is not null && ppOcrEnglish == english) return ppOcr;
+            if (ppOcrFailed || !PpOcrReader.IsInstalled(PpOcrDirectory)) return ppOcr;
             try
             {
-                ppOcr = new PpOcrReader(PpOcrDirectory);
-                SubtitleLog.Write("güçlü okuyucu: PP-OCR modeli yüklendi");
+                // Eski okuyucu kapatılmaz: çalışan bir okuma hattı onu hâlâ kullanıyor olabilir.
+                ppOcr = new PpOcrReader(PpOcrDirectory, language)
+                {
+                    Score = text => (SubtitlePipeline.ExtraReadingScore ?? OcrNoise.Score)(text),
+                };
+                ppOcrEnglish = english;
+                SubtitleLog.Write("güçlü okuyucu: PP-OCR modeli yüklendi" + (ppOcr.UsesEnglish ? " (İngilizce tanıma modeliyle)" : ""));
             }
             catch (Exception error)
             {

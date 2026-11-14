@@ -22,17 +22,18 @@ public class PpOcrTests
     [Fact]
     public void KernelGrowsIntoALineBoxWithRoomAroundTheText()
     {
-        // 12 piksel yüksekliğinde çekirdek: dikey pay 18, yatay pay 17 (yuvarlanmış 16,8).
+        // 12 piksel yüksekliğinde çekirdek: dikey pay 11 (yuvarlanmış 10,8), yatay pay 17 (yuvarlanmış 16,8).
         var boxes = PpOcr.FindLines(Map(416, 190, (300, 90, 380, 102)), 416, 400, 190);
         var box = Assert.Single(boxes);
-        Assert.Equal(new PpOcr.Box(283, 72, 397, 120), box);
+        Assert.Equal(new PpOcr.Box(283, 79, 397, 113), box);
     }
 
     [Fact]
     public void BoxIsClampedToTheImage()
     {
+        // Üstte, solda ve sağda pay görüntünün dışına taşar; altta sığar (16 + 11).
         var box = Assert.Single(PpOcr.FindLines(Map(416, 40, (2, 4, 398, 16)), 416, 400, 40));
-        Assert.Equal(new PpOcr.Box(0, 0, 400, 34), box);
+        Assert.Equal(new PpOcr.Box(0, 0, 400, 27), box);
     }
 
     [Fact]
@@ -119,13 +120,31 @@ public class PpOcrTests
     public void ModelFilesArePinnedWithSizeAndHash()
     {
         Assert.Equal(2, PpOcrReader.Files.Count);
-        Assert.All(PpOcrReader.Files, file =>
+        Assert.Equal(PpOcrReader.EnglishRecognizerFile, PpOcrReader.EnglishFile.Name);
+        Assert.All(PpOcrReader.Files.Append(PpOcrReader.EnglishFile), file =>
         {
             Assert.Equal(64, file.Sha256.Length);
             Assert.True(file.Size > 1_000_000);
             Assert.StartsWith("https://huggingface.co/SWHL/RapidOCR/resolve/", file.Url.AbsoluteUri);
             Assert.DoesNotContain("/main/", file.Url.AbsoluteUri);
         });
+    }
+
+    /// İngilizce tanıma modeli yalnız oyun dili İngilizceyken ve dosyası varken kullanılır.
+    [Fact]
+    public void EnglishModelIsOnlyForEnglishAndOnlyWhenPresent()
+    {
+        var empty = Path.Combine(Path.GetTempPath(), "gt-ppocr-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(empty);
+        try
+        {
+            Assert.False(PpOcrReader.HasEnglish(empty, "en"));
+            Assert.False(PpOcrReader.HasEnglish(empty, "ja"));
+        }
+        finally
+        {
+            Directory.Delete(empty, recursive: true);
+        }
     }
 }
 

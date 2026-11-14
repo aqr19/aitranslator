@@ -52,6 +52,18 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 | BouncyCastle.Cryptography (used by SSH.NET) | MIT | https://github.com/bcgit/bc-csharp |
 | Microsoft.Extensions.Logging.Abstractions (used by SSH.NET) | MIT | https://github.com/dotnet/runtime |
 
+The Windows app also includes a list of common English words (`Assets/english-words.txt.gz`, lower-cased, generated
+from the English Speller Database, size 60, at https://app.aspell.net/create), used to tell real words from text
+recognition errors:
+
+> Copyright 2000-2026 by Kevin Atkinson
+>
+> Permission to use, copy, modify, distribute, and sell any part of the English Speller Database (ESDB, previously
+> known as SCOWLv2), or word lists created from it, is hereby granted without fee, provided that the above copyright
+> notice appears in all copies and that both the above copyright notice and this notice appear in supporting
+> documentation. Kevin Atkinson makes no representations about the suitability of this database for any purpose. It is
+> provided "as is" without express or implied warranty.
+
 FFmpeg is built from the unmodified upstream release with the configuration in
 `.github/workflows/windows.yml`. You can rebuild `gametranslator_native.dll` with your own FFmpeg build using
 `windows/native/CMakeLists.txt` and place it next to `GameTranslator.exe`.
@@ -68,12 +80,13 @@ The model is used unmodified (int8 quantised ONNX files as published by onnx-com
 
 | Component | License | Source |
 |---|---|---|
-| PP-OCRv4 text detection and recognition models (`ch_PP-OCRv4_det_infer.onnx`, `ch_PP-OCRv4_rec_infer.onnx`) | Apache-2.0 | PaddleOCR, PaddlePaddle Authors — https://github.com/PaddlePaddle/PaddleOCR; ONNX conversion by RapidOCR — https://github.com/RapidAI/RapidOCR, files from https://huggingface.co/SWHL/RapidOCR |
+| PP-OCRv4 text detection and recognition models (`ch_PP-OCRv4_det_infer.onnx`, `ch_PP-OCRv4_rec_infer.onnx`) and PP-OCRv3 English recognition model (`en_PP-OCRv3_rec_infer.onnx`) | Apache-2.0 | PaddleOCR, PaddlePaddle Authors — https://github.com/PaddlePaddle/PaddleOCR; ONNX conversion by RapidOCR — https://github.com/RapidAI/RapidOCR, files from https://huggingface.co/SWHL/RapidOCR |
 
-The models are not part of the installer. When the two files are present in
+The models are not part of the installer. When the first two files are present in
 `%LOCALAPPDATA%\GameTranslator\models\ppocr`, the Windows app re-reads subtitle lines that Windows' own text recognition
-got wrong with them. They are used unmodified; the app checks their size and SHA-256
-(`windows/src/GameTranslator.Translation/PpOcrReader.cs`).
+got wrong with them; when the English recognition model is also present and the game language is English, each line is
+read with both recognition models and the better reading is kept. They are used unmodified; the app checks their size
+and SHA-256 (`windows/src/GameTranslator.Translation/PpOcrReader.cs`).
 
 ## Downloaded on first use of Turkish dubbing (Mac)
 

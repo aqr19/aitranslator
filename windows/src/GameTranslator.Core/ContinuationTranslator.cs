@@ -23,6 +23,7 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
     private readonly Func<long> now = clock ?? (() => Environment.TickCount64);
     private readonly object gate = new();
     private (string? Speaker, string Body, string Raw, long At)? previous;
+    private readonly SpeakerNames names = new();
 
     public bool Prefetches => inner.Prefetches;
     public void Prefetch(string text) => inner.Prefetch(text);
@@ -30,7 +31,7 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
 
     public async Task<string> TranslateAsync(string text, CancellationToken cancellationToken = default)
     {
-        var source = WithoutRepeatedLines(text);
+        var source = Relabel(WithoutRepeatedLines(text));
         // Birkaç kişi konuşuyorsa her konuşma kendi adıyla ayrı çevrilir (aynı anda); adlar çevrilmez.
         if (Turns(source) is { Count: > 1 } turns)
         {
@@ -45,11 +46,36 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
     }
 
     /// <summary>
+    /// İki nokta üst üstesi okunmamış konuşmacı adını ("Stintsy Fuck, he's here.") oyunda daha önce görülen adla
+    /// "Stints: Fuck, he's here." biçimine getirir; adın çevrilmesi ve söze karışması önlenir.
+    /// </summary>
+    private string Relabel(string source)
+    {
+        var rows = source.Split('\n');
+        var changed = false;
+        lock (gate)
+        {
+            for (var i = 0; i < rows.Length; i++)
+            {
+                var row = rows[i].Trim();
+                if (row.Length == 0 || SpeakerLabel().IsMatch(row)) continue;
+                var words = row.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+                if (words.Length < 2 || names.LabelIn(words[0], words[1]) is not { } name) continue;
+                rows[i] = $"{name}: {row[(row.IndexOf(' ') + 1)..].TrimStart()}";
+                changed = true;
+            }
+        }
+        return changed ? string.Join('\n', rows) : source;
+    }
+
+    /// <summary>
     /// Sözü çevirir, konuşmacı adını olduğu gibi başına koyar. Ad çevirmene verilmez: çevirmen onu sıradan sözcük sanıp
     /// çeviriyor ("ANNA:" → "ANNE:", "MILLER:" → "DEĞİRMENCİ:") ve aynı ad bir öyle bir böyle çıkıyordu.
     /// </summary>
     private async Task<string> TranslateTurn(string? speaker, string body, CancellationToken cancellationToken)
     {
+        // Bozuk okunmuş ad ("Minnir") oyunda sık geçen doğrusuna ("Mimir") çevrilir.
+        if (speaker is not null) lock (gate) speaker = names.Canonical(speaker);
         if (body.Length == 0) return speaker is null ? "" : speaker + ":";
         var translated = (await inner.TranslateAsync(body, cancellationToken).ConfigureAwait(false)).Trim();
         return speaker is null ? translated : $"{speaker}: {translated}";
@@ -171,7 +197,31 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
     private static (string? Speaker, string Body) Split(string text)
     {
         var match = SpeakerLabel().Match(text);
-        return match.Success ? (match.Groups["name"].Value, text[match.Length..].Trim()) : (null, text.Trim());
+        if (!match.Success) return (null, text.Trim());
+        var name = match.Groups["name"].Value;
+        var body = text[match.Length..].Trim();
+        // Satır değişirken ad iki kez okunabiliyor ("Faye: Faye: This way.", "Kratos: Kratos. The tracks stop here.").
+        while (true)
+        {
+            var rest = body.TrimStart('"', '“', '\'', '•', '-', '—', '(', ' ');
+            // Virgül sayılmaz: "Sam: Sam, wait!" seslenmedir.
+            if (rest.StartsWith(name, StringComparison.Ordinal) && rest.Length >= name.Length + 2 && ":.;•".Contains(rest[name.Length]))
+            {
+                body = rest[(name.Length + 1)..].Trim();
+                continue;
+            }
+            // İki sözcüklü ad noktalamasız yinelenmiş: "Woman's Voice: Woman's Voice The Zero Dawn system".
+            if (name.Contains(' ') && rest.StartsWith(name + " ", StringComparison.Ordinal) && rest.Length > name.Length + 2 && char.IsUpper(rest[name.Length + 1]))
+            {
+                body = rest[(name.Length + 1)..].Trim();
+                continue;
+            }
+            // Adın bozuk ikinci okuması ("Lae'zel: Lae'ze: It cannot be helped.").
+            var colon = rest.IndexOf(": ", StringComparison.Ordinal);
+            if (colon < 3 || colon > name.Length + 2 || rest[..colon].Contains(' ') != name.Contains(' ') || !SameName(rest[..colon], name)) break;
+            body = rest[(colon + 2)..].Trim();
+        }
+        return (name, body);
     }
 
     [GeneratedRegex(@"^(?<name>\p{Lu}[\p{L}.’'-]*(?: \p{Lu}[\p{L}.’'-]*){0,2}):\s")]

@@ -24,6 +24,39 @@ public class HybridReaderTests
     private static HybridReader Hybrid(Scripted fast, Scripted strong, Func<long>? clock = null) =>
         new(fast, strong, clock) { LooksMisread = text => text.Contains("zz", StringComparison.Ordinal) };
 
+    /// Onarımla düzelen hızlı okuma için güçlü okuyucu çalışmaz.
+    [Fact]
+    public void RepairedFastReadingNeedsNoStrongReader()
+    {
+        var strong = new Scripted("Hold the gate.");
+        var reader = Hybrid(new Scripted("Hold the gzzte."), strong);
+        reader.Repair = text => text.Replace("gzzte", "gate");
+        Assert.Equal("Hold the gate.", reader.ReadLines(Image, deep: true).Text);
+        Assert.Equal(0, strong.Calls);
+    }
+
+    /// Güçlü okuyucu satırı boşluksuz okuduysa (tek "sözcük") hızlı okumanın yerine geçmez.
+    [Fact]
+    public void GluedStrongReadingDoesNotReplaceTheFastOne()
+    {
+        var reader = Hybrid(new Scripted("Kirk: I trust 'im lizze a brother."), new Scripted("Kirkitrustimlikeobrother."));
+        Assert.Equal("Kirk: I trust 'im lizze a brother.", reader.ReadLines(Image, deep: true).Text);
+        Assert.Equal(0, reader.StrongWins);
+    }
+
+    /// Güçlü okuyucunun zemindeki dokudan okuduğu çöp satır ("HIITIIE") okumayı bozmaz; satır çıkarılır.
+    [Fact]
+    public void JunkLineOfTheStrongReaderIsDropped()
+    {
+        var reader = new HybridReader(new Scripted("Hold the gzzte."), new Scripted("Hold the gate.\nQQXQQ"))
+        {
+            LooksMisread = text => text.Contains("zz", StringComparison.Ordinal) || text.Contains("QQ", StringComparison.Ordinal),
+            Score = text => text.Contains("QQ", StringComparison.Ordinal) ? -5 : text.Count(char.IsLetter),
+        };
+        Assert.Equal("Hold the gate.", reader.ReadLines(Image, deep: true).Text);
+        Assert.Equal(1, reader.StrongWins);
+    }
+
     [Fact]
     public void CleanReadingNeverRunsTheStrongReader()
     {
@@ -80,6 +113,20 @@ public class HybridReaderTests
         }
         // 2 saniyede en çok dört deneme (600 ms'de bir).
         Assert.InRange(strong.Calls, 3, 4);
+    }
+
+    /// Boş sahnede güçlü okuyucunun dokudan uydurduğu yazı (tek harf, tek "sözcük", başka yazı sistemi) okuma sayılmaz.
+    [Theory]
+    [InlineData("MEEEEEI")]
+    [InlineData("d")]
+    [InlineData("AU\nU&OD")]
+    [InlineData("发 / 鱼")]
+    [InlineData("好 morning to you all")]
+    public void JunkFoundByTheProbeIsNotAReading(string junk)
+    {
+        var reader = Hybrid(new Scripted(""), new Scripted(junk));
+        Assert.Equal("", reader.ReadLines(Image, deep: true).Text);
+        Assert.Equal(0, reader.StrongWins);
     }
 
     [Fact]

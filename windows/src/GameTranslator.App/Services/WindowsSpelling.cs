@@ -26,7 +26,7 @@ public sealed class WindowsSpelling
             {
                 var factory = (ISpellCheckerFactory)new SpellCheckerFactoryClass();
                 foreach (var tag in new[] { language, language == "en" ? "en-US" : language, language == "en" ? "en-GB" : language }.Distinct())
-                    if (factory.IsSupported(tag)) return new WindowsSpelling(factory.CreateSpellChecker(tag));
+                    if (factory.IsSupported(tag)) return new WindowsSpelling(factory.CreateSpellChecker(tag)) { english = language.StartsWith("en", StringComparison.OrdinalIgnoreCase) };
                 return null;
             }).GetAwaiter().GetResult();
         }
@@ -34,6 +34,47 @@ public sealed class WindowsSpelling
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Yaygın İngilizce sözcükler (SCOWL/ESDB 60 boyutu, küçük harf; Assets\english-words.txt.gz). Windows'un sözlüğü
+    /// çok geniş: yazı tanımanın uydurduğu "nauch", "reis", "todo", "fi" gibi okumaları da kabul ediyor; o zaman bozuk
+    /// okuma fark edilmiyor ve onarılmıyordu. Oyun dili İngilizceyse sözcük her iki sözlükte de olmalı. Liste
+    /// yüklenemezse yalnız Windows'a sorulur.
+    /// </summary>
+    private static readonly Lazy<HashSet<string>?> English = new(LoadEnglish);
+
+    private static HashSet<string>? LoadEnglish()
+    {
+        try
+        {
+            using var stream = typeof(WindowsSpelling).Assembly.GetManifestResourceStream("GameTranslator.App.Assets.english-words.txt.gz");
+            if (stream is null) return null;
+            using var unzip = new System.IO.Compression.GZipStream(stream, System.IO.Compression.CompressionMode.Decompress);
+            using var reader = new System.IO.StreamReader(unzip);
+            var words = new HashSet<string>(StringComparer.Ordinal);
+            while (reader.ReadLine() is { } line) if (line.Length > 0) words.Add(line);
+            return words;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private bool english;
+
+    /// <summary>Sözcük yaygın İngilizce sözcük listesinde mi ("'s", sonu düşmüş "-ing" ve tireli parçalar dahil).</summary>
+    internal static bool InEnglishList(HashSet<string> words, string word)
+    {
+        var lower = word.ToLowerInvariant().Replace('’', '\'');
+        if (words.Contains(lower)) return true;
+        if (lower.EndsWith("'s", StringComparison.Ordinal) && words.Contains(lower[..^2])) return true;
+        if (lower.EndsWith("s'", StringComparison.Ordinal) && words.Contains(lower[..^1])) return true;
+        if (lower.EndsWith("in'", StringComparison.Ordinal) && words.Contains(lower[..^1] + "g")) return true;
+        if (lower.EndsWith("in", StringComparison.Ordinal) && lower.Length > 4 && words.Contains(lower + "g")) return true;
+        if (lower.Contains('-')) return lower.Split('-').All(part => part.Length == 0 || words.Contains(part));
+        return false;
     }
 
     public bool IsWord(string word)
@@ -47,6 +88,7 @@ public sealed class WindowsSpelling
                 var errors = checker.Check(word);
                 result = errors.Next(out var error) != 0 || error is null;
             }
+            if (result && english && English.Value is { } list) result = InEnglishList(list, word);
         }
         catch
         {

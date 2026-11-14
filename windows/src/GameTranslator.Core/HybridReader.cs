@@ -23,6 +23,11 @@ public sealed class HybridReader(ITextReader fast, ITextReader strong, Func<long
     public Func<string, bool>? LooksMisread { get; set; }
     /// <summary>Okumanın puanı (yüksek: daha çok gerçek sözcük); verilmezse <see cref="OcrNoise.Score"/>.</summary>
     public Func<string, int>? Score { get; set; }
+    /// <summary>
+    /// Satır onarımı (karışan harfler, boşluksuz okunmuş sözcükler: <see cref="OcrConfusions.Repair"/>). İki okuma
+    /// karşılaştırılmadan önce ikisi de onarılır; onarılınca temizlenen hızlı okuma için güçlü okuyucu çalışmaz.
+    /// </summary>
+    public Func<string, string>? Repair { get; set; }
     /// <summary>Güçlü okuyucunun devreye girdiği her kare için bir satır (altyazı günlüğü).</summary>
     public Action<string>? Log { get; set; }
 
@@ -44,20 +49,27 @@ public sealed class HybridReader(ITextReader fast, ITextReader strong, Func<long
             if (now() - lastProbe < ProbeEveryMs) return quick;
             lastProbe = now();
             var probed = Strong(image, deep);
-            if (probed.Text.Trim().Length == 0 || Points(probed.Text) <= 0) return quick;
+            // Güçlü okuyucu boş sahnede de bir şeyler "okur" (dokudan "MEEEEEI", tek harfler, başka yazı sisteminden
+            // harfler); yalnız gerçekten yazıya benzeyen okuma kabul edilir.
+            if (!LooksLikeText(probed.Text) || Points(probed.Text) <= 0) return quick;
             StrongWins++;
             Log?.Invoke($"güçlü okuyucu: hızlı okuyucu boş döndü → {SubtitleLog.Excerpt(probed.Text)}");
             return probed;
         }
         if (!Misread(text)) return quick;
+        // Onarılabilen okuma ("Tinne is running out, ny love.") güçlü okuyucuyu beklemeden düzelir.
+        quick = Tidy(quick);
+        text = quick.Text.Trim();
+        if (!Misread(text)) return quick;
 
-        var careful = Strong(image, deep);
+        var careful = Tidy(Strong(image, deep));
         var other = careful.Text.Trim();
         var (quickPoints, carefulPoints) = (Points(text), Points(other));
         // Hızlı okuma bozuk. Güçlü okuma bozuk görünmüyorsa kazanır (yalnız harf sayan puan bozuk okumayı
         // "daha uzun" diye üstün sayabiliyor); ama satırın küçük bir parçası olmamalı. İkisi de bozuksa puan
         // belirler; eşitlikte hızlı okuma kalır, hattın geri kalanı onun satır kutularına göre ayarlandı.
-        var clean = other.Length > 0 && !Misread(other) && Letters(other) * 10 >= Letters(text) * 6;
+        // Sözcük sayısı da yakın olmalı: güçlü okuyucu bazen satırı boşluksuz okuyor ("Kirkitrustimlikeobrother.").
+        var clean = other.Length > 0 && !Misread(other) && Letters(other) * 10 >= Letters(text) * 6 && Words(other) * 10 >= Words(text) * 6;
         if (other.Length == 0 || (!clean && carefulPoints <= quickPoints))
         {
             Log?.Invoke($"güçlü okuyucu: hızlı okuma kaldı ({quickPoints} ≥ {carefulPoints}) {SubtitleLog.Excerpt(text)}");
@@ -82,9 +94,40 @@ public sealed class HybridReader(ITextReader fast, ITextReader strong, Func<long
         }
     }
 
+    /// <summary>
+    /// Hızlı okuyucunun göremediği yerde güçlü okuyucunun bulduğu yazı gerçek mi: en az iki sözcük ve sekiz harf,
+    /// harflerin hepsi Latin yazısından ve yazım denetimine göre bozuk değil.
+    /// </summary>
+    private bool LooksLikeText(string text)
+    {
+        text = text.Trim();
+        var letters = text.Where(char.IsLetter).ToList();
+        if (letters.Count < 8 || letters.Any(letter => letter > 'ɏ')) return false;
+        var words = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Count(word => word.Count(char.IsLetter) >= 2);
+        return words >= 2 && !Misread(text);
+    }
+
+    /// <summary>
+    /// Satırları onarır ve birden çok satırlı okumadan çöp satırları ("HIITIIE", "MKIceAng": zemindeki dokudan okunan
+    /// harfler) çıkarır: bozuk ve hiç gerçek sözcüğü olmayan satır. Okumada en az bir satır kalır.
+    /// </summary>
+    private Reading Tidy(Reading reading)
+    {
+        if (reading.Lines.Count == 0) return reading;
+        var lines = Repair is { } repair ? reading.Lines.Select(line => line with { Text = repair(line.Text) }).ToList() : [.. reading.Lines];
+        if (lines.Count > 1)
+        {
+            var kept = lines.Where(line => !(Misread(line.Text) && Points(line.Text) <= 0)).ToList();
+            if (kept.Count > 0) lines = kept;
+        }
+        return new Reading(lines);
+    }
+
     private bool Misread(string text) => OcrNoise.LooksGarbled(text) || (LooksMisread?.Invoke(text) ?? false);
 
     private int Points(string text) => (Score ?? OcrNoise.Score)(text);
 
     private static int Letters(string text) => text.Count(char.IsLetter);
+
+    private static int Words(string text) => text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Count(word => word.Any(char.IsLetter));
 }

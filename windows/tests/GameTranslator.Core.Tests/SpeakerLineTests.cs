@@ -17,6 +17,20 @@ public class SpeakerLineTests
         Assert.Equal(0.0, Read("ELENA", "Run!").WithSpeakerLine().Lines[0].Box!.Value.Top);
     }
 
+    /// Baş harfi büyük ad ("Sojiro") yalnız sözün sol üstündeki kendi kutusundaysa ve söz yeni cümleyle başlıyorsa addır.
+    [Fact]
+    public void TitleCaseNameAboveTheSpeechJoinsIt()
+    {
+        static Reading Boxed(params (string Text, double Left, double Right)[] lines) =>
+            new(lines.Select((line, row) => new TextLine(line.Text, new TextBox(line.Left, 0.1 * row, line.Right, (0.1 * row) + 0.05))));
+        Assert.Equal("Sojiro: You'll be alone at night.\nDon't do anything stupid.",
+            Boxed(("Sojiro", 0.20, 0.30), ("You'll be alone at night.", 0.22, 0.70), ("Don't do anything stupid.", 0.22, 0.65)).WithSpeakerLine().Text);
+        // Ortalı iki satırlık altyazı, ünlem ya da küçük harfle süren cümle ad değildir.
+        Assert.Equal("Sojiro\nI know.", Boxed(("Sojiro", 0.45, 0.55), ("I know.", 0.46, 0.54)).WithSpeakerLine().Text);
+        Assert.Equal("Yeah\nI know what you did.", Boxed(("Yeah", 0.20, 0.28), ("I know what you did.", 0.21, 0.70)).WithSpeakerLine().Text);
+        Assert.Equal("Sojiro\nwill be taking care of me.", Boxed(("Sojiro", 0.20, 0.30), ("will be taking care of me.", 0.21, 0.70)).WithSpeakerLine().Text);
+    }
+
     [Fact]
     public void OrdinaryLinesAreLeftAlone()
     {

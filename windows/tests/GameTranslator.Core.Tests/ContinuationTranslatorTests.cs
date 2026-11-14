@@ -40,6 +40,48 @@ public class ContinuationTranslatorTests
         Assert.Equal(["ANNA: tr:Are you all right?", "tr:Careful now."], shown);
     }
 
+    /// Satır değişirken ad iki kez okunabiliyor; ikinci ad söze katılmaz. Seslenme ("Sam, wait!") sözdür.
+    [Theory]
+    [InlineData("Faye: Faye: This way.", "This way.")]
+    [InlineData("Kratos: Kratos. The tracks stop here.", "The tracks stop here.")]
+    [InlineData("Jesse: \"Jesse: Sounds exciting.", "Sounds exciting.")]
+    [InlineData("Kratos: (Kratos: They should not be this close.", "They should not be this close.")]
+    [InlineData("Lae'zel: Lae'ze: It cannot be helped. Come.", "It cannot be helped. Come.")]
+    [InlineData("Varl: Varl• So the storms.", "So the storms.")]
+    [InlineData("Woman's Voice: Woman's Voice The Zero Dawn system.", "The Zero Dawn system.")]
+    [InlineData("Aloy: \" —Aloy: We'll need to cut through.", "We'll need to cut through.")]
+    [InlineData("Sam: Sam, wait for me!", "Sam, wait for me!")]
+    [InlineData("Sam: Samuel is gone.", "Samuel is gone.")]
+    public async Task SpeakerNameReadTwiceIsNotPartOfTheSpeech(string line, string speech)
+    {
+        var (sent, _) = await Feed((line, 0));
+        Assert.Equal([speech], sent);
+    }
+
+    /// İki nokta üst üstesi harf okunmuş ad ("Stintsy") bilinen adla etiket olur; ad sözün içindeyse dokunulmaz.
+    [Fact]
+    public async Task SpeakerNameWithMisreadColonBecomesALabel()
+    {
+        var lines = Enumerable.Range(0, 4).Select(i => ($"Stints: Line number {i} it is.", (long)i * 20000)).ToList();
+        lines.Add(("Stintsy Fuck, he's here.", 100000));
+        lines.Add(("Jockie Hey, pal.", 120000));
+        lines.Add(("Stints is a cop.", 140000));
+        var (sent, shown) = await Feed([.. lines]);
+        Assert.Equal("Stints: tr:Fuck, he's here.", shown[4]);
+        Assert.Equal("tr:Jockie Hey, pal.", shown[5]);
+        Assert.Equal("tr:Stints is a cop.", shown[6]);
+    }
+
+    /// Oyunda sık geçen adın bozuk okuması doğrusuyla gösterilir.
+    [Fact]
+    public async Task MisreadSpeakerNameIsShownAsTheNameSeenOften()
+    {
+        var lines = Enumerable.Range(0, 4).Select(i => ($"Mimir: Line number {i} it is.", (long)i * 20000)).ToList();
+        lines.Add(("Minnir: He never came back.", 100000));
+        var (_, shown) = await Feed([.. lines]);
+        Assert.Equal("Mimir: tr:He never came back.", shown[^1]);
+    }
+
     [Fact]
     public async Task SeveralSpeakersAreTranslatedSeparatelyWithTheirNames()
     {

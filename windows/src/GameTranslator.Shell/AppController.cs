@@ -995,9 +995,16 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         built.TidySpeakersAndHeadings = true;
         // Otomatik algılamada şerit sert bir kırpma değildir: şeridin çevresi geniş okunur, şeritteki satırlar ve onlara
         // bitişik satırlar altyazıdır (üç dört satıra uzayan altyazının alt satırı kesiliyordu).
-        built.LineFilter = (read, area) => settings.AutoRegion && autoBand is { } band
+        // Şeride düşen arayüz yazısı (envanter çubuğu, savaş günlüğü) kısa sürede aynen yinelenir ve cümle gibi
+        // bitmez; üç kez çevrildikten sonra bir süre okunmaz.
+        var repeats = new RepeatedText();
+        built.LineFilter = (read, area) => WithoutGarbageLines(repeats.Without(settings.AutoRegion && autoBand is { } band
             ? SubtitleFinder.Grow(read, area, (band.Item1, band.Item2))
-            : read;
+            : read));
+        built.PairShown += (source, _) =>
+        {
+            if (repeats.Note(source) is { } blocked) SubtitleLog.Write($"arayüz yazısı: {SubtitleLog.Excerpt(blocked)} yineleniyor, artık çevrilmeyecek");
+        };
         // Cümlenin başı okunamamış parça ("bad at surrendering.") bozuk okumadır: tamamı gelsin diye bekletilir;
         // çok kısaysa ya da sözcüklerinin çoğu gerçek değilse hiç çevrilmez.
         var misread = built.LooksMisread;
@@ -1005,7 +1012,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         // adı kaçırılmış okumadır: adlı okuması gelsin diye kısa süre bekletilir (aynı satır önce adsız sonra adlı
         // iki kez gösteriliyordu).
         var speakerStreak = 0;
-        built.LooksMisread = text => misread(text) || Misspelling.IsOrphanFragment(text, built.LastPair?.Source) ||
+        built.LooksMisread = text => misread(text) || Misspelling.IsOrphanFragment(text, built.LastPair?.Source) || LooksLikeFragment(text) ||
             (Volatile.Read(ref speakerStreak) >= 3 && !text.Contains('\n') && !HasSpeakerLabel(text));
         built.PairShown += (source, _) =>
         {
@@ -1036,6 +1043,34 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         built.TranslationResult += error => post(() => TranslatorStatus = error ?? TranslatorStatus.Ready);
         built.SpeechReady += lines => post(() => Speak(lines));
         pipeline = built;
+    }
+
+    /// <summary>
+    /// Altyazı değişirken bir anlığına okunan parça gibi mi: konuşmacı adsız tek satır ve ya tek sözcük ("Yeah?",
+    /// "Sit?") ya da en çok üç sözcük olup cümlenin ortasından başlıyor (",to me.", "pin Ito me."). Böyle okuma bozuk
+    /// sayılır: kısa süre bekletilir, ardından tam satır gelirse atılır, gelmezse her zamanki gibi çevrilir.
+    /// </summary>
+    public static bool LooksLikeFragment(string text)
+    {
+        var line = text.Trim();
+        if (line.Length == 0 || line.Contains('\n') || HasSpeakerLabel(line)) return false;
+        var words = line.Split(' ', StringSplitOptions.RemoveEmptyEntries).Count(word => word.Any(char.IsLetter));
+        if (words == 1) return true;
+        if (words > 3) return false;
+        var first = line.FirstOrDefault(char.IsLetter);
+        return char.IsLower(first) || ",;.:-'".Contains(line[0]);
+    }
+
+    /// <summary>
+    /// Birden çok satırlı okumadan okunamayan satırları çıkarır (yazı belirirken ikinci satır "wee eats etic lid entia"
+    /// okunuyor ve okunan her bozuk hâli ayrı çeviri olarak gösteriliyordu). Hiç düzgün satır yoksa okuma olduğu gibi
+    /// kalır; bütünüyle bozuk okumayı okuma hattının kendi denetimi ele alır.
+    /// </summary>
+    private static Reading WithoutGarbageLines(Reading reading)
+    {
+        if (reading.Lines.Count < 2 || SubtitlePipeline.ExtraGarbageCheck is not { } garbage) return reading;
+        var kept = reading.Lines.Where(line => !garbage(line.Text)).ToList();
+        return kept.Count == reading.Lines.Count || kept.Count == 0 ? reading : new Reading(kept);
     }
 
     /// <summary>Satır "Ad: söz" biçiminde mi (ad büyük harfle başlar, en çok üç sözcüktür).</summary>

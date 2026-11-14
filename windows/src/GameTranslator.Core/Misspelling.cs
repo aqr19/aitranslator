@@ -34,6 +34,8 @@ public sealed class Misspelling(Func<string, bool> isWord)
             {
                 // "I" sonraki sözcüğe yapışmış ("Igot it", "Iknow"): ad değil, bozuk okumadır.
                 if (word[0] == 'I' && letters >= 3 && !isWord(word) && isWord(word[1..])) bad += letters;
+                // Boşlukları okunmamış bütün satır ("Kirkitrustimlikeobrother") ad değildir: adlar bu kadar uzun olmaz.
+                else if (letters > 13 && !word.Contains('-') && !isWord(word)) bad += letters;
                 continue;
             }
             if (!isWord(word) && !IsContraction(word)) bad += letters;

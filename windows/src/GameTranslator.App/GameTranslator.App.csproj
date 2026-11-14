@@ -25,6 +25,8 @@
 
   <ItemGroup>
     <Resource Include="Assets\logo.png" />
+    <!-- Yaygın İngilizce sözcükler (SCOWL/ESDB, Kevin Atkinson; izin metni THIRD-PARTY-NOTICES.md'de). -->
+    <EmbeddedResource Include="Assets\english-words.txt.gz" LogicalName="GameTranslator.App.Assets.english-words.txt.gz" />
     <!-- ShellWindow.xaml pencere simgesi olarak bunu okur; ApplicationIcon yalnız exe simgesidir. -->
     <Resource Include="Assets\GameTranslator.ico" />
     <!-- Inter (SIL Open Font License 1.1; Assets\Fonts\Inter-LICENSE): mobil uygulamayla aynı yazı tipi. -->

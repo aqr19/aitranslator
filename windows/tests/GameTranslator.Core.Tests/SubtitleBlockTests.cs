@@ -65,6 +65,19 @@ public class SubtitleBlockTests
     public void ButtonAtTheEndIsAPrompt(string line, bool prompt) => Assert.Equal(prompt, ButtonPrompts.IsPrompt(line));
 
     [Theory]
+    [InlineData("X Pick up Select(O) Actions Sort Tooltips (OFF) O Close", true)]
+    [InlineData("X Pickup Select(O) @ Actions Sort Tooltips (OFF) O Close", true)]
+    [InlineData("X marks the spot, O great one, and we dig.", false)]
+    [InlineData("O Captain, where is the X on this map", false)]
+    [InlineData("(S) Pickup Select(O) @ Actions Sort Tooltips (OFF) O Close", true)]
+    [InlineData("Select) O Actions Sort Tooltips (OFF) O Close", true)]
+    [InlineData("Bonus Action A I Movement I 5.9", true)]
+    [InlineData("Movement 1.8 lay on Hands", true)]
+    [InlineData("It costs 2.5 coins.", false)]
+    [InlineData("We waited 1.5 hours for the boat to come back to the harbor", false)]
+    public void BarOfSeveralPromptsIsAPrompt(string line, bool prompt) => Assert.Equal(prompt, ButtonPrompts.IsPrompt(line));
+
+    [Theory]
     [InlineData("9? We'll lose these tracks.", "We'll lose these tracks.")]
     [InlineData("100. Mac and John...", "Mac and John...")]
     [InlineData("23m CESARE: It's here! Shoot him!", "CESARE: It's here! Shoot him!")]

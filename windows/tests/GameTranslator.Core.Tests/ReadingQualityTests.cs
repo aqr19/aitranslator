@@ -41,6 +41,8 @@ public class MisspellingTests
     [Theory]
     [InlineData("I've got you! Hold on!", false)]
     [InlineData("IVe got ou! Hold on!", true)]
+    [InlineData("Kirkitrustimlikeobrother.", true)]
+    [InlineData("Wait, Kephallonia.", false)]
     [InlineData("Igot it, you're gonna be safe.", true)]
     [InlineData("I'm gonnatry workaroun.", true)]
     [InlineData("What sh ppening to the equ Sts that are coming in?", true)]

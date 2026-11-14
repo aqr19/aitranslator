@@ -18,10 +18,12 @@ internal static class PpOcr
     public const int MinKernelWidth = 16;
     /// <summary>
     /// Satır bulma modeli yazının tamamını değil ortasındaki çekirdeği (yüksekliğin yaklaşık yarısı) işaretler. Tanıma
-    /// modeli yazının çevresinde boşluk ister: pay yokken sözcük aralarını hiç okumuyor (hata %16), çekirdeğin 1,5 katı
-    /// dikey ve 1,4 katı yatay payla hata %2,6'ya iniyor (100 görüntüde taranarak bulundu).
+    /// modeli yazının çevresinde boşluk ister: pay yokken sözcük aralarını hiç okumuyor. Dikey pay çekirdeğin 0,9 katı,
+    /// yatay pay 1,4 katıdır. Yapay görüntülerde 1,5 katı dikey pay en iyisiydi (hata %2,6; 0,9'da %4,8), ama altı
+    /// oyunun gerçek karelerinde fazla pay yazıyı küçültüp okumayı bozuyor: 0,9 ile doğru okunan sözcük küçük yazılı
+    /// oyunda yarı yarıya artıyor (475 → 738), diğerlerinde aynı ya da daha iyi. 0,6'da harflerin ucu kesiliyor.
     /// </summary>
-    public const double GrowVertical = 1.5;
+    public const double GrowVertical = 0.9;
     public const double GrowHorizontal = 1.4;
     /// <summary>Aynı bantta bu kadar çekirdek yüksekliğinden geniş boşluk iki ayrı yazıyı ayırır (gösterge ile altyazı).</summary>
     public const double SplitGapHeights = 4;

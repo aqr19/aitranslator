@@ -17,10 +17,17 @@ public sealed class PpOcrReader : ITextReader, IDisposable
 {
     public const string DetectorFile = "ch_PP-OCRv4_det_infer.onnx";
     public const string RecognizerFile = "ch_PP-OCRv4_rec_infer.onnx";
+    /// <summary>
+    /// İngilizce için ikinci tanıma modeli (PP-OCRv3). Gerçek oyun karelerinde sözcük aralarını çok daha iyi korur
+    /// (küçük ve hareketli zeminli altyazıda genel modelin iki katı gerçek sözcük); temiz satırlarda ikisi denktir ve
+    /// hataları farklı yerlerdedir, bu yüzden satır ikisiyle de okunup iyi olan seçilir.
+    /// </summary>
+    public const string EnglishRecognizerFile = "en_PP-OCRv3_rec_infer.onnx";
 
     // Depo belirli bir sürüme sabitlenir; dosyalar boyut ve SHA-256 ile doğrulanır.
     private const string Revision = "1cfba2e90fc938db55889873735088de210cc173";
     private static readonly string BaseUrl = $"https://huggingface.co/SWHL/RapidOCR/resolve/{Revision}/PP-OCRv4/";
+    private static readonly string OlderUrl = $"https://huggingface.co/SWHL/RapidOCR/resolve/{Revision}/PP-OCRv3/";
 
     /// <summary>İndirilecek model dosyaları (toplam ~15 MB).</summary>
     public static IReadOnlyList<ModelFile> Files { get; } =
@@ -31,8 +38,19 @@ public sealed class PpOcrReader : ITextReader, IDisposable
             "48fc40f24f6d2a207a2b1091d3437eb3cc3eb6b676dc3ef9c37384005483683b"),
     ];
 
+    /// <summary>İngilizce için ek tanıma modeli (~9 MB); yoksa okuyucu yalnız genel modelle çalışır.</summary>
+    public static ModelFile EnglishFile { get; } = new(EnglishRecognizerFile, new Uri(OlderUrl + EnglishRecognizerFile), 8_967_018,
+        "ef7abd8bd3629ae57ea2c28b425c1bd258a871b93fd2fe7c433946ade9b5d9ea");
+
+    /// <summary>İki okumadan hangisi iyi (yüksek: daha çok gerçek sözcük); verilmezse <see cref="OcrNoise.Score"/>.</summary>
+    public Func<string, int>? Score { get; set; }
+
     private readonly InferenceSession detector;
     private readonly InferenceSession recognizer;
+    private readonly InferenceSession? english;
+    private readonly string englishInput = "";
+    private readonly string[] englishOutputs = [];
+    private readonly List<string> englishAlphabet = [];
     private readonly string detectorInput;
     private readonly string recognizerInput;
     private readonly string[] detectorOutputs;
@@ -40,7 +58,8 @@ public sealed class PpOcrReader : ITextReader, IDisposable
     private readonly List<string> alphabet;
     private readonly RunOptions runOptions = new();
 
-    public PpOcrReader(string modelDirectory)
+    /// <param name="language">Oyunun dili; "en" ise ve dosyası varsa İngilizce tanıma modeli de yüklenir.</param>
+    public PpOcrReader(string modelDirectory, string language = "")
     {
         using var options = new SessionOptions
         {
@@ -66,7 +85,28 @@ public sealed class PpOcrReader : ITextReader, IDisposable
         recognizerOutputs = [recognizer.OutputNames[0]];
         // Sözlük modelin içindedir.
         alphabet = PpOcr.Alphabet(recognizer.ModelMetadata.CustomMetadataMap["character"]);
+        if (!HasEnglish(modelDirectory, language)) return;
+        try
+        {
+            english = new InferenceSession(Path.Combine(modelDirectory, EnglishRecognizerFile), options);
+            englishInput = english.InputNames[0];
+            englishOutputs = [english.OutputNames[0]];
+            englishAlphabet = PpOcr.Alphabet(english.ModelMetadata.CustomMetadataMap["character"]);
+        }
+        catch (Exception error) when (error is OnnxRuntimeException or KeyNotFoundException or IOException)
+        {
+            // Ek model açılamazsa genel modelle devam edilir.
+            english?.Dispose();
+            english = null;
+        }
     }
+
+    /// <summary>İngilizce tanıma modeli bu dil için kullanılacak mı (dil İngilizce ve dosya doğru boyutta).</summary>
+    public static bool HasEnglish(string modelDirectory, string language) =>
+        language.StartsWith("en", StringComparison.OrdinalIgnoreCase) && new ModelStore(modelDirectory, [EnglishFile]).IsInstalled;
+
+    /// <summary>İngilizce tanıma modeli yüklü mü (günlük için).</summary>
+    public bool UsesEnglish => english is not null;
 
     /// <summary>Model dosyaları klasörde ve doğru boyutta mı.</summary>
     public static bool IsInstalled(string modelDirectory) => new ModelStore(modelDirectory, Files).IsInstalled;
@@ -111,9 +151,20 @@ public sealed class PpOcrReader : ITextReader, IDisposable
         var input = new float[3 * lineWidth * PpOcr.LineHeight];
         PpOcr.Normalize(resized, lineWidth, PpOcr.LineHeight, input, lineWidth, PpOcr.LineHeight);
         using var value = OrtValue.CreateTensorValueFromMemory(input, [1, 3, PpOcr.LineHeight, lineWidth]);
-        using var outputs = recognizer.Run(runOptions, [recognizerInput], [value], recognizerOutputs);
+        var general = Recognize(recognizer, recognizerInput, recognizerOutputs, alphabet, value);
+        if (english is null) return general;
+        var specific = Recognize(english, englishInput, englishOutputs, englishAlphabet, value);
+        if (specific.Length == 0) return general;
+        // Eşitlikte İngilizce model: sözcük aralarını ve kesme işaretlerini daha doğru verir.
+        var score = Score ?? OcrNoise.Score;
+        return score(general) > score(specific) ? general : specific;
+    }
+
+    private string Recognize(InferenceSession session, string input, string[] outputNames, List<string> letters, OrtValue value)
+    {
+        using var outputs = session.Run(runOptions, [input], [value], outputNames);
         var shape = outputs[0].GetTensorTypeAndShape().Shape; // [1, adım, sınıf]
-        return PpOcr.Decode(outputs[0].GetTensorDataAsSpan<float>(), (int)shape[1], (int)shape[2], alphabet);
+        return PpOcr.Decode(outputs[0].GetTensorDataAsSpan<float>(), (int)shape[1], (int)shape[2], letters);
     }
 
     /// <summary>BGRA kareyi RGB baytlara çevirir (model RGB sırasıyla eğitildi).</summary>
@@ -139,6 +190,7 @@ public sealed class PpOcrReader : ITextReader, IDisposable
     {
         detector.Dispose();
         recognizer.Dispose();
+        english?.Dispose();
         runOptions.Dispose();
     }
 }
