@@ -53,7 +53,7 @@ public class ContinuationTranslatorTests
     public async Task TailOfThePreviousLineFollowedByASpeakerIsSplitToo()
     {
         var (sent, shown) = await Feed(("all gone now.\nGUARD: Watch the gate closely,\nand call out if you see anyone!", 0));
-        Assert.Equal(["Watch the gate closely, and call out if you see anyone!", "all gone now."], sent.Order().ToList());
+        Assert.Equal(["Watch the gate closely, and call out if you see anyone!", "all gone now."], sent.Order(StringComparer.Ordinal).ToList());
         Assert.Equal("tr:all gone now.\nGUARD: tr:Watch the gate closely, and call out if you see anyone!", shown[0]);
     }
 
