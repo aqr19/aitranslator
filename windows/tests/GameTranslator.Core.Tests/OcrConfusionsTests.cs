@@ -11,7 +11,7 @@ public class OcrConfusionsTests
         "modern", "moment", "are", "you", "ok", "hold", "on", "weapon", "from", "form",
         "time", "running", "out", "my", "love", "there", "much", "we", "won't", "find", "him", "this", "way", "let's",
         "that", "trail", "blood", "use", "words", "brother", "no", "truth", "hurts", "huh", "a", "i", "here", "where",
-        "heywood", "as", "her", "hey", "wood", "oh", "help", "brother", "try", "contraption", "just", "next", "pod", "did", "something", "when", "sealed", "me", "in", "learned", "come", "had", "apples", "fi", "et", "oy", "field", "bello", "win", "bellowing", "hence", "ray", "field", "mine", "should", "known", "stay", "trash", "sea", "woman", "little", "faith", "jackie",
+        "heywood", "as", "her", "hey", "wood", "oh", "help", "brother", "try", "contraption", "just", "next", "pod", "did", "something", "when", "sealed", "me", "in", "learned", "come", "had", "apples", "fi", "et", "oy", "money", "lot", "paying", "field", "bello", "win", "bellowing", "hence", "ray", "field", "mine", "should", "known", "stay", "trash", "sea", "woman", "little", "faith", "jackie",
     };
 
     private static string Repair(string line) => OcrConfusions.Repair(line, Words.Contains);
@@ -53,6 +53,7 @@ public class OcrConfusionsTests
     [InlineData("Ohl no.", "Ohl no.")]
     [InlineData("1 learned a long time ago.", "I learned a long time ago.")]
     [InlineData("Stoy where you are!", "Stay where you are!")]
+    [InlineData("paying you a lot of Ilioney", "paying you a lot of money")]
     [InlineData("You're o woman of little faith.", "You're a woman of little faith.")]
     [InlineData("Street trosh in the seo.", "Street trash in the sea.")]
     [InlineData("Conne on.", "Come on.")]

@@ -70,7 +70,14 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
             {
                 var row = rows[i].Trim();
                 if (row.Length == 0 || SpeakerLabel().IsMatch(row)) continue;
-                var words = row.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+                var words = row.Split(' ', 4, StringSplitOptions.RemoveEmptyEntries);
+                // İki sözcüklü ad: "Charles Rookwoods Jelve done…" (ikinci sözcüğe ":" harf olarak yapışmış).
+                if (words.Length >= 3 && names.LabelIn(words[0] + " " + words[1], words[2]) is { } longName)
+                {
+                    rows[i] = $"{longName}: {string.Join(' ', words.Skip(2))}";
+                    changed = true;
+                    continue;
+                }
                 if (words.Length < 2 || names.LabelIn(words[0], words[1]) is not { } name) continue;
                 rows[i] = $"{name}: {row[(row.IndexOf(' ') + 1)..].TrimStart()}";
                 changed = true;

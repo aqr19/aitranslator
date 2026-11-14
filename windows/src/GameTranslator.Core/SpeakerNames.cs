@@ -123,7 +123,8 @@ public sealed class SpeakerNames
             .Concat(confirmed.Where(pair => pair.Value >= ConfirmedAfter).Select(pair => pair.Key)).Distinct()];
         foreach (var known in names)
         {
-            if (known.Length < 4 || known.Contains(' ') || token == known) continue;
+            // Sözcük sayısı aynı olmalı (iki sözcüklü ad iki sözcüklü parçayla karşılaştırılır).
+            if (known.Length < 4 || known.Count(c => c == ' ') != token.Count(c => c == ' ') || token == known) continue;
             var extra = token.Length - known.Length;
             if (token.StartsWith(known, StringComparison.Ordinal) && extra is 1 or 2 && token[known.Length..].All(char.IsLower)) return known;
             if (token.Length >= 5 && next is { Length: > 0 } && char.IsUpper(next[0]) && Alike(token, known)) return known;

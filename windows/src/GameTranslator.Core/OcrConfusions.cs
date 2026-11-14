@@ -37,6 +37,8 @@ public static class OcrConfusions
         ("nn", "m"), ("n", "m"), ("na", "m"), ("no", "m"), ("c", "t"), ("c", "e"), ("i", "l"),
         // Köşeli yazı tiplerinde "a" "o" okunuyor ("Stoy where you are", "trosh").
         ("o", "a"),
+        // İnce, yüksek yazı tiplerinde "m" "Ili" / "lli" okunuyor ("Ilioney" → "money").
+        ("Ili", "m"), ("lli", "m"),
     ];
 
     public static string Repair(string line, Func<string, bool>? isWord)

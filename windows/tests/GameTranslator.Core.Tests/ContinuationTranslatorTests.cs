@@ -95,6 +95,17 @@ public class ContinuationTranslatorTests
         Assert.Equal("Mimir: tr:It's been some time...", shown[0]);
     }
 
+    /// İki sözcüklü adın iki noktası da harf okunabiliyor: "Charles Rookwoods We've done all that we can."
+    [Fact]
+    public async Task TwoWordNameWithMisreadColonBecomesALabel()
+    {
+        var lines = Enumerable.Range(0, 4).Select(i => ($"Charles Rookwood: Line number {i} it is.", (long)i * 20000)).ToList();
+        lines.Add(("Charles Rookwoods We've done all that we can.", 100000));
+        var (sent, shown) = await Feed([.. lines]);
+        Assert.Equal("We've done all that we can.", sent[^1]);
+        Assert.Equal("Charles Rookwood: tr:We've done all that we can.", shown[^1]);
+    }
+
     /// Oyunda sık geçen adın bozuk okuması doğrusuyla gösterilir.
     [Fact]
     public async Task MisreadSpeakerNameIsShownAsTheNameSeenOften()
