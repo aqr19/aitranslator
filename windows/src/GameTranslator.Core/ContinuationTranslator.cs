@@ -24,6 +24,8 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
     private readonly object gate = new();
     private (string? Speaker, string Body, string Raw, long At)? previous;
     private readonly SpeakerNames names = new();
+    /// <summary>Konuşmacı adları (okuma hattıyla paylaşılır: güçlü okuyucunun okuduğu adlar doğrulanmış sayılır).</summary>
+    public SpeakerNames Names { init => names = value; }
 
     /// <summary>
     /// Kısa ünlemlerin hazır karşılığı (<see cref="ShortPhrases.Translate"/>; İngilizce→Türkçe). Verilirse ve sözün
@@ -37,10 +39,13 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
 
     public async Task<string> TranslateAsync(string text, CancellationToken cancellationToken = default)
     {
-        var source = Relabel(WithoutRepeatedLines(text));
+        var source = Relabel(WithoutBareLabels(WithoutRepeatedLines(text)));
         // Birkaç kişi konuşuyorsa her konuşma kendi adıyla ayrı çevrilir (aynı anda); adlar çevrilmez.
-        if (Turns(source) is { Count: > 1 } turns)
+        if (Turns(source) is { Count: > 1 } all)
         {
+            // Sözü olmayan konuşma (bir sonraki konuşmanın önce beliren adı: "… / Mimir:") gösterilmez.
+            var turns = all.Where(turn => turn.Body.Any(char.IsLetter)).ToList();
+            if (turns.Count == 0) turns = all;
             lock (gate) previous = null;
             var parts = await Task.WhenAll(turns.Select(turn => TranslateTurn(turn.Speaker, turn.Body, cancellationToken))).ConfigureAwait(false);
             return string.Join('\n', parts);
@@ -80,6 +85,14 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
     /// </summary>
     private async Task<string> TranslateTurn(string? speaker, string body, CancellationToken cancellationToken)
     {
+        // Gerçek adın önüne çöp bir "ad" eklenmiş ("QHI: Mimir: Uzun zaman oldu..."): söz bilinen bir adla başlıyorsa
+        // ve öndeki ad bilinmiyorsa konuşmacı içteki addır.
+        if (speaker is not null && SpeakerLabel().Match(body) is { Success: true } innerLabel &&
+            names.IsKnown(innerLabel.Groups["name"].Value) && !names.IsKnown(speaker))
+        {
+            speaker = innerLabel.Groups["name"].Value;
+            body = body[innerLabel.Length..].Trim();
+        }
         // Bozuk okunmuş ad ("Minnir") oyunda sık geçen doğrusuna ("Mimir") çevrilir.
         if (speaker is not null) lock (gate) speaker = names.Canonical(speaker);
         if (body.Length == 0) return speaker is null ? "" : speaker + ":";
@@ -228,11 +241,26 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
             if (colon < 3 || colon > name.Length + 2 || rest[..colon].Contains(' ') != name.Contains(' ') || !SameName(rest[..colon], name)) break;
             body = rest[(colon + 2)..].Trim();
         }
+        // Addan sonra tek başına okunan harf, konuşmacı simgesinin artığıdır ("Faye: S This way.", "Faye: Faye:S This
+        // way."). "I" ve "A" sözdür.
+        if (body.Length > 3 && char.IsUpper(body[0]) && body[0] is not ('I' or 'A') && body[1] == ' ' && char.IsUpper(body[2]))
+            body = body[2..];
         return (name, body);
     }
 
     [GeneratedRegex(@"^(?<name>\p{Lu}[\p{L}.’'-]*(?: \p{Lu}[\p{L}.’'-]*){0,2}):\s")]
     private static partial Regex SpeakerLabel();
+
+    [GeneratedRegex(@"^\p{Lu}[\p{L}.’'-]*(?: \p{Lu}[\p{L}.’'-]*){0,2}:$")]
+    private static partial Regex BareLabel();
+
+    /// <summary>Sözü olmayan ad satırı ("… / Mimir:": bir sonraki konuşmanın önce beliren adı) başka satır varsa atılır.</summary>
+    private static string WithoutBareLabels(string text)
+    {
+        var rows = text.Split('\n').Select(row => row.Trim()).Where(row => row.Length > 0).ToList();
+        var kept = rows.Where(row => !BareLabel().IsMatch(row)).ToList();
+        return kept.Count == rows.Count || kept.Count == 0 ? text : string.Join('\n', kept);
+    }
 
     private static bool IsTailCopy(string line, string earlier)
     {

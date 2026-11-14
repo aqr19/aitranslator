@@ -47,6 +47,10 @@ public class ContinuationTranslatorTests
     [InlineData("Jesse: \"Jesse: Sounds exciting.", "Sounds exciting.")]
     [InlineData("Kratos: (Kratos: They should not be this close.", "They should not be this close.")]
     [InlineData("Lae'zel: Lae'ze: It cannot be helped. Come.", "It cannot be helped. Come.")]
+    [InlineData("Faye: S This way.", "This way.")]
+    [InlineData("Faye: Faye:S This way.", "This way.")]
+    [InlineData("Kratos: I dream of the past.", "I dream of the past.")]
+    [InlineData("Aloy: A machine is coming.", "A machine is coming.")]
     [InlineData("Varl: Varl• So the storms.", "So the storms.")]
     [InlineData("Woman's Voice: Woman's Voice The Zero Dawn system.", "The Zero Dawn system.")]
     [InlineData("Aloy: \" —Aloy: We'll need to cut through.", "We'll need to cut through.")]
@@ -70,6 +74,25 @@ public class ContinuationTranslatorTests
         Assert.Equal("Stints: tr:Fuck, he's here.", shown[4]);
         Assert.Equal("tr:Jockie Hey, pal.", shown[5]);
         Assert.Equal("tr:Stints is a cop.", shown[6]);
+    }
+
+    /// Gerçek adın önüne eklenen çöp "ad" ("QHI:") atılır; konuşmacı bilinen addır.
+    [Fact]
+    public async Task JunkLabelBeforeAKnownSpeakerIsDropped()
+    {
+        var lines = Enumerable.Range(0, 4).Select(i => ($"Mimir: Line number {i} it is.", (long)i * 20000)).ToList();
+        lines.Add(("QHI: Mimir: It's been some time...", 100000));
+        var (sent, shown) = await Feed([.. lines]);
+        Assert.Equal("It's been some time...", sent[^1]);
+        Assert.Equal("Mimir: tr:It's been some time...", shown[^1]);
+    }
+
+    /// Bir sonraki konuşmanın önce beliren adı (sözsüz "Mimir:") gösterilmez.
+    [Fact]
+    public async Task LabelWithoutSpeechIsNotShown()
+    {
+        var (_, shown) = await Feed(("Mimir: It's been some time...\nKratos:", 0));
+        Assert.Equal("Mimir: tr:It's been some time...", shown[0]);
     }
 
     /// Oyunda sık geçen adın bozuk okuması doğrusuyla gösterilir.

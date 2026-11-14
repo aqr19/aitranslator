@@ -35,6 +35,14 @@ public sealed class HybridReader(ITextReader fast, ITextReader strong, Func<long
     public int StrongRuns { get; private set; }
     public int StrongWins { get; private set; }
 
+    /// <summary>
+    /// Okuma bozuk görünmese de güçlü okuyucunun da bakması gereken satır (ör. konuşmacı adı henüz doğrulanmadı).
+    /// Böyle satırda hızlı okuma kalır; güçlü okuyucunun okuması yalnız <see cref="StrongRead"/>'e verilir.
+    /// </summary>
+    public Func<string, bool>? NeedsStrong { get; set; }
+    /// <summary>Güçlü okuyucunun her okuması (konuşmacı adlarını doğrulamak için).</summary>
+    public Action<Reading>? StrongRead { get; set; }
+
     public string Read(Frame image) => ReadLines(image, deep: true).Text;
 
     public string Read(Frame image, bool deep) => ReadLines(image, deep).Text;
@@ -56,7 +64,11 @@ public sealed class HybridReader(ITextReader fast, ITextReader strong, Func<long
             Log?.Invoke($"güçlü okuyucu: hızlı okuyucu boş döndü → {SubtitleLog.Excerpt(probed.Text)}");
             return probed;
         }
-        if (!Misread(text)) return quick;
+        if (!Misread(text))
+        {
+            if (NeedsStrong?.Invoke(text) == true) Strong(image, deep);
+            return quick;
+        }
         // Onarılabilen okuma ("Tinne is running out, ny love.") güçlü okuyucuyu beklemeden düzelir.
         quick = Tidy(quick);
         text = quick.Text.Trim();
@@ -85,7 +97,9 @@ public sealed class HybridReader(ITextReader fast, ITextReader strong, Func<long
         StrongRuns++;
         try
         {
-            return strong.ReadLines(image, deep);
+            var reading = strong.ReadLines(image, deep);
+            StrongRead?.Invoke(reading);
+            return reading;
         }
         catch
         {

@@ -985,9 +985,18 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
                          settings.TargetLanguage.StartsWith("tr", StringComparison.OrdinalIgnoreCase)
             ? ShortPhrases.Translate
             : (Func<string, string?>?)null;
+        // Konuşmacı adları: Windows'un okuyucusu bazı adları hep aynı biçimde bozuyor ("Aloy" → "Alou"); adı henüz
+        // doğrulanmamış satırı güçlü okuyucu da okur, onun okuduğu ad doğru ad sayılır.
+        var names = new SpeakerNames();
+        if (reader is HybridReader hybrid)
+        {
+            hybrid.NeedsStrong = names.NeedsCheck;
+            hybrid.StrongRead = names.Confirm;
+        }
         var built = new SubtitlePipeline(reader, new ContinuationTranslator(MakeTranslator(), looksMisread: text => SubtitlePipeline.ExtraMisreadCheck?.Invoke(text) ?? false)
         {
             Phrasebook = phrasebook,
+            Names = names,
         }, server, new ReadScheduler());
         // Paket yalnız oynanan oyunun paketiyse kullanılır (başka oyunun genel satırları yanlış çeviri basıyordu).
         var packGate = new PackGate();
@@ -1075,10 +1084,22 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     /// okunuyor ve okunan her bozuk hâli ayrı çeviri olarak gösteriliyordu). Hiç düzgün satır yoksa okuma olduğu gibi
     /// kalır; bütünüyle bozuk okumayı okuma hattının kendi denetimi ele alır.
     /// </summary>
+    /// <summary>
+    /// Zemindeki dokudan ya da filigrandan okunan, tek "sözcüklük", tümü büyük harfli ve gerçek sözcük olmayan satır
+    /// ("IETTET", "HIITIIE"). Büyük harfli gerçek sözcük ("NO!", "RUN") ve kısaltmalar (en çok 3 harf) kalır.
+    /// </summary>
+    public static bool IsCapsJunk(string text, Func<string, bool>? isWord)
+    {
+        var token = text.Trim().Trim('.', ',', '!', '?', '-', '•', '\'', '"');
+        if (token.Length < 4 || token.Contains(' ') || !token.All(char.IsUpper)) return false;
+        return isWord is null ? !"AEIOU".Any(token.Contains) || token.Distinct().Count() * 2 <= token.Length : !isWord(token.ToLowerInvariant());
+    }
+
     private static Reading WithoutGarbageLines(Reading reading)
     {
         if (reading.Lines.Count < 2 || SubtitlePipeline.ExtraGarbageCheck is not { } garbage) return reading;
-        var kept = reading.Lines.Where(line => !garbage(line.Text)).ToList();
+        var word = SubtitlePipeline.ExtraWordCheck;
+        var kept = reading.Lines.Where(line => !garbage(line.Text) && !IsCapsJunk(line.Text, word)).ToList();
         return kept.Count == reading.Lines.Count || kept.Count == 0 ? reading : new Reading(kept);
     }
 

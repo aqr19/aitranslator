@@ -64,4 +64,33 @@ public class SpeakerNamesTests
             if (i >= 4 && i % 5 == 4) Assert.Equal("Mimir", names.Canonical("Minnir"));
         }
     }
+
+    private static Reading Lines(params string[] lines) => new(lines.Select(line => new TextLine(line, null)));
+
+    /// Windows'un okuyucusu adı hep aynı biçimde bozsa da ("Alou"), güçlü okuyucunun okuduğu ad ("Aloy") kullanılır.
+    [Fact]
+    public void NameReadByTheStrongReaderWinsOverTheCommonMisreading()
+    {
+        var names = Knowing("Alou", 10);
+        Assert.True(names.NeedsCheck("Alou: Let's go."));
+        names.Confirm(Lines("Aloy: Let's go."));
+        names.Confirm(Lines("Aloy: We're clear.", "Varl: Good."));
+        Assert.False(names.NeedsCheck("Alou: Let's go."));
+        Assert.Equal("Aloy", names.Canonical("Alou"));
+        Assert.Equal("Aloy", names.Canonical("Alog"));
+        // Doğrulanmamış başka ad kendisi kalır ve denetlenmesi istenir; adsız satır istenmez.
+        Assert.Equal("Erend", names.Canonical("Erend"));
+        Assert.True(names.NeedsCheck("Erend: Hey."));
+        Assert.False(names.NeedsCheck("We're clear."));
+    }
+
+    /// İki gerçek ad ikisi de doğrulanmışsa birbirine çevrilmez.
+    [Fact]
+    public void TwoConfirmedSimilarNamesStayApart()
+    {
+        var names = new SpeakerNames();
+        for (var i = 0; i < 2; i++) names.Confirm(Lines("Maria: Go.", "Marie: Stay."));
+        Assert.Equal("Marie", names.Canonical("Marie"));
+        Assert.Equal("Maria", names.Canonical("Maria"));
+    }
 }
