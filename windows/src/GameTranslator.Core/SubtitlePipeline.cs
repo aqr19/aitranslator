@@ -62,6 +62,8 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
     public static Func<string, int>? ExtraReadingScore { get; set; }
     /// <summary>Uygulamanın verdiği "çevrilemeyecek kadar bozuk" ölçüsü (Windows'ta yazım denetimi); bkz. <see cref="IsGarbage"/>.</summary>
     public static Func<string, bool>? ExtraGarbageCheck { get; set; }
+    /// <summary>Uygulamanın verdiği sözcük denetimi (Windows'ta yazım denetimi); bekletilen okumalar bununla birleştirilir.</summary>
+    public static Func<string, bool>? ExtraWordCheck { get; set; }
     /// <summary>Çevrilen satırın daha iyi olmayan yeniden okuması bu süre içinde yeni satır sayılmaz.</summary>
     public const int RereadWithinMs = 4000;
     private const int RememberedPairs = 8;
@@ -70,6 +72,8 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
     /// gecikme satırın ilk okunduğu kareden sayılır; bekleme de gecikmeye girer.
     /// </summary>
     private (string Source, TextBox? Box, long Since, int Wait, int Score, ReadInfo? Read)? held;
+    /// <summary>Bekletilen satırın bekleme süresince gelen bütün okumaları (sözcük sözcük birleştirmek için).</summary>
+    private readonly List<string> heldReadings = [];
     /// <summary>Son çevrilen (motora ya da pakete giden) okuma, puanı ve zamanı.</summary>
     private (string Source, int Score, long At)? lastSent;
 
@@ -265,6 +269,7 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
                     else if ((IsRereadOf(source, waiting.Source) || IsRereadOf(waiting.Source, source)) && now() - waiting.Since < wait)
                     {
                         // Aynı satırın başka bir okuması: daha iyisi tutulur, süre baştan başlamaz.
+                        NoteHeldReading(source);
                         var score = ReadingScore(source);
                         if (score > waiting.Score)
                         {
@@ -289,7 +294,7 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
                     {
                         // Bekleyen temiz bir satırdı, yerine başka satır geldi: önce o çevrilir.
                         held = null;
-                        flushed = Enqueue(waiting.Source, waiting.Box, waiting.Read);
+                        flushed = Enqueue(Settle(waiting.Source), waiting.Box, waiting.Read);
                     }
                 }
                 else if (action.Kind != StabilizerKind.None)
@@ -297,7 +302,7 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
                     // Bölge boşaldı ya da eski satır geri geldi: bekleyen temiz satır her zamanki gibi çevrilir; bozuk
                     // okuma ("Bluffe") çevrilmez.
                     held = null;
-                    if (!LooksMisread(waiting.Source)) flushed = Enqueue(waiting.Source, waiting.Box, waiting.Read);
+                    if (!LooksMisread(waiting.Source)) flushed = Enqueue(Settle(waiting.Source), waiting.Box, waiting.Read);
                     else Write($"bozuk okuma atıldı: {SubtitleLog.Excerpt(waiting.Source)} beklerken kalktı");
                 }
                 else if (reading.Text.Trim().Length >= 3 && PackLookup?.Invoke(reading.Text) is { } packed)
@@ -313,6 +318,7 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
                 {
                     // Kararlayıcı aynı satır saydı; okuma daha iyiyse (ör. yarım okumanın tamamı) o tutulur.
                     var text = reading.Text.Trim();
+                    if (text.Length >= 3 && Related(text, waiting.Source)) NoteHeldReading(text);
                     if (text.Length >= 3 && Related(text, waiting.Source) && ReadingScore(text) > waiting.Score)
                     {
                         var merged = KeepMissingLines(text, waiting.Source);
@@ -325,7 +331,7 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
                     if (settled || now() - waiting.Since >= waiting.Wait)
                     {
                         held = null;
-                        after = Enqueue(waiting.Source, waiting.Box, waiting.Read);
+                        after = Enqueue(Settle(waiting.Source), waiting.Box, waiting.Read);
                     }
                 }
             }
@@ -348,6 +354,23 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
         // Olaylar kilidin dışında çağrılır.
         flushed?.Invoke();
         after?.Invoke();
+    }
+
+    private void NoteHeldReading(string reading)
+    {
+        if (heldReadings.Count < 8 && !heldReadings.Contains(reading)) heldReadings.Add(reading);
+    }
+
+    /// <summary>
+    /// Bekleyen satırın çevrilecek hâli: bekleme süresince gelen okumalar sözcük sözcük birleştirilir
+    /// (<see cref="ReadingConsensus"/>); birleşen okuma günlüğe yazılır.
+    /// </summary>
+    private string Settle(string source)
+    {
+        var merged = ReadingConsensus.Merge(source, heldReadings, ExtraWordCheck);
+        heldReadings.Clear();
+        if (merged != source) Write($"birleşik okuma: {SubtitleLog.Excerpt(source)} → {SubtitleLog.Excerpt(merged)}");
+        return merged;
     }
 
     /// <summary>
@@ -379,6 +402,8 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
         var wait = WaitFor(source);
         if (wait <= 0) return Enqueue(source, box);
         held = (source, box, now(), wait, ReadingScore(source), currentRead);
+        heldReadings.Clear();
+        heldReadings.Add(source);
         Write($"bekletiliyor (en çok {wait} ms): {SubtitleLog.Excerpt(source)}");
         return null;
     }

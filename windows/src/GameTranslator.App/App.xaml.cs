@@ -48,6 +48,7 @@ public partial class App : Application
         SubtitlePipeline.ExtraMisreadCheck = misspelling.LooksMisread;
         SubtitlePipeline.ExtraReadingScore = misspelling.Score;
         SubtitlePipeline.ExtraGarbageCheck = misspelling.IsGarbage;
+        SubtitlePipeline.ExtraWordCheck = spelling.IsWord;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
