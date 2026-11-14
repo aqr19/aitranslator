@@ -52,7 +52,14 @@ public static class Replay
             SubtitleLog.Flush();
             app.Shutdown();
         });
-        _ = controller.StartAsync();
+        _ = StartAsync(controller);
+    }
+
+    private static async Task StartAsync(AppController controller)
+    {
+        await controller.StartAsync();
+        // TV görünümünü bilgisayarda çizecek araç bu adrese bağlanır (8787 kurulu uygulamadaysa başka bir port olur).
+        SubtitleLog.Write($"replay: sunucu http://127.0.0.1:{controller.ServerPort}");
     }
 
     private sealed class MemoryStore : IAppStore
@@ -65,7 +72,9 @@ public static class Replay
 
     private sealed class MemorySettings : ISettingsStore
     {
-        private UserSettings settings = new() { VideoSource = VideoSourceType.DesktopScreen, AutoRegion = true };
+        // Altyazı görünümü (yerleşim, boy, zemin) kullanıcınınkiyle aynı olsun diye ayar dosyasından okunur; dosyaya
+        // hiçbir şey yazılmaz.
+        private UserSettings settings = new() { VideoSource = VideoSourceType.DesktopScreen, AutoRegion = true, Style = new FileSettingsStore().Load().Style };
         public UserSettings Load() => settings;
         public void Save(UserSettings value) => settings = value;
     }

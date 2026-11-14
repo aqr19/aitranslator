@@ -111,6 +111,7 @@ public sealed class SubtitleServer(int port = 8787, TimeSpan? pingInterval = nul
     internal const string PingFrame = ": ping\n\nevent: ping\ndata: {}\n\n";
 
     private readonly object gate = new();
+    private readonly StableCover stableCover = new();
     private readonly List<Client> clients = [];
     private TcpListener? listener;
     private Timer? pingTimer;
@@ -201,7 +202,8 @@ public sealed class SubtitleServer(int port = 8787, TimeSpan? pingInterval = nul
         if (box is { } b)
         {
             var cover = style is { Placement: SubtitlePlacement.Cover } && !paragraphs;
-            json["box"] = BoxJson(cover ? CoverFit.Box(b, text, style!.FontSize) : b);
+            // Zemin satırdan satıra zıplamasın, aynı altyazıda daralmasın (StableCover).
+            json["box"] = BoxJson(cover ? stableCover.Next(CoverFit.Box(b, text, style!.FontSize)) : b);
         }
         Broadcast(Frame("subtitle", json), subtitle: true);
         EventSent?.Invoke(new SubtitleEvent(SubtitleEventKind.Subtitle, text, durationMs, paragraphs, replaces));

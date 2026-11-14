@@ -14,8 +14,11 @@ public static class CoverFit
     private const double ScreenHeight = 1080;
     /// <summary>Yazı alanının genişliği (TV'de soldan ve sağdan %4 boşluk).</summary>
     private const double MaxWidth = 0.92;
-    /// <summary>Ortalama harf genişliğinin yazı boyuna oranı (kalın, Latin harfli yazı; boşluklar dahil).</summary>
-    private const double CharWidth = 0.54;
+    /// <summary>
+    /// Ortalama harf genişliğinin yazı boyuna oranı (kalın, Latin harfli yazı; boşluklar dahil). TV görünümünün
+    /// bilgisayarda canlandırılmasıyla ölçüldü: Türkçe çeviride ~0,63 (0,54 alınınca uzun satır zeminden taşıyordu).
+    /// </summary>
+    private const double CharWidth = 0.63;
     private const double LineHeight = 1.3;
 
     public static TextBox Box(TextBox source, string text, int fontSize)

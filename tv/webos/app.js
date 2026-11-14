@@ -6,7 +6,7 @@
   'use strict';
 
   // TV uygulamasının sürümü: appinfo.json, tv-tizen/config.xml ve tv-android/app/build.gradle ile aynı tutulur.
-  var APP_VERSION = '1.0.3';
+  var APP_VERSION = '1.0.4';
   var t = window.t;
   var config = window.GAMETRANSLATOR_CONFIG || window.GAMETRANSLATOR_CONFIG || {};
   var platform = window.GAMETRANSLATOR_PLATFORM || window.GAMETRANSLATOR_PLATFORM;
@@ -488,7 +488,8 @@
       $('subtitle-text').style.background = 'rgba(0, 0, 0, ' + alpha + ')';
       $('subtitle-prev-text').style.background = 'rgba(0, 0, 0, ' + (alpha * 0.83).toFixed(2) + ')';
       var coverEl = $('subtitle-cover');
-      if (coverEl) coverEl.style.background = 'rgba(0, 0, 0, ' + Math.max(0.92, alpha) + ')';
+      // Örtü İngilizce altyazıyı tamamen kapatmalı: %92 koyulukta beyaz yazı soluk da olsa seçiliyordu.
+      if (coverEl) coverEl.style.background = 'rgb(10, 10, 12)';
     }
     if (typeof style.bold === 'boolean') {
       $('subtitle-text').style.fontWeight = style.bold ? '700' : '600';

@@ -37,7 +37,7 @@ html, body {
   position: absolute;
   z-index: 9;
   border-radius: 10px;
-  background: rgba(0, 0, 0, 0.97);
+  background: rgb(10, 10, 12);
 }
 #subtitle-cover.hidden { display: none; }
 
@@ -85,6 +85,8 @@ html, body {
 
 #subtitle-text {
   display: inline-block;
+  /* Birden çok konuşmacı ("Jackie: … / V: …") ayrı satırlarda görünür; bilgisayar konuşmaları satır sonuyla ayırır. */
+  white-space: pre-line;
   padding: 10px 26px;
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.72);
