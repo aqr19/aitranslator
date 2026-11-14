@@ -64,6 +64,17 @@ FFmpeg is built from the unmodified upstream release with the configuration in
 
 The model is used unmodified (int8 quantised ONNX files as published by onnx-community).
 
+## Optional text recognition model (Windows)
+
+| Component | License | Source |
+|---|---|---|
+| PP-OCRv4 text detection and recognition models (`ch_PP-OCRv4_det_infer.onnx`, `ch_PP-OCRv4_rec_infer.onnx`) | Apache-2.0 | PaddleOCR, PaddlePaddle Authors — https://github.com/PaddlePaddle/PaddleOCR; ONNX conversion by RapidOCR — https://github.com/RapidAI/RapidOCR, files from https://huggingface.co/SWHL/RapidOCR |
+
+The models are not part of the installer. When the two files are present in
+`%LOCALAPPDATA%\GameTranslator\models\ppocr`, the Windows app re-reads subtitle lines that Windows' own text recognition
+got wrong with them. They are used unmodified; the app checks their size and SHA-256
+(`windows/src/GameTranslator.Translation/PpOcrReader.cs`).
+
 ## Downloaded on first use of Turkish dubbing (Mac)
 
 | Component | License | Source |

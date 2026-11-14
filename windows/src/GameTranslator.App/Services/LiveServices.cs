@@ -338,6 +338,50 @@ public sealed class LiveServices : IAppServices
     }
 
     public ITextReader? MakeReader(string language) => WindowsOcrReader.Create(language);
+
+    /// <summary>PP-OCR modelinin klasörü (%LOCALAPPDATA%\GameTranslator\models\ppocr).</summary>
+    private static readonly string PpOcrDirectory = Path.Combine(AppPaths.Models, "ppocr");
+    private static readonly object PpOcrGate = new();
+    private static PpOcrReader? ppOcr;
+    private static bool ppOcrFailed;
+
+    /// <summary>
+    /// Altyazı okuyucusu: Windows'un yazı tanıması, PP-OCR modeli kuruluysa onunla birlikte (bozuk okunan satır güçlü
+    /// okuyucuyla yeniden okunur). Model yoksa ya da açılamazsa yalnız Windows okuyucu. Model oturumları uygulama
+    /// boyunca tek örnektir ve okuma hatları arasında paylaşılır (eşzamanlı çağrıya dayanıklıdır).
+    /// </summary>
+    public ITextReader? MakeSubtitleReader(string language)
+    {
+        var fast = WindowsOcrReader.Create(language);
+        if (fast is null || PpOcrShared() is not { } strong) return fast;
+        return new HybridReader(fast, strong)
+        {
+            LooksMisread = text => SubtitlePipeline.ExtraMisreadCheck?.Invoke(text) ?? false,
+            Score = text => (SubtitlePipeline.ExtraReadingScore ?? OcrNoise.Score)(text),
+            Log = SubtitleLog.Write,
+        };
+    }
+
+    private static PpOcrReader? PpOcrShared()
+    {
+        lock (PpOcrGate)
+        {
+            if (ppOcr is not null || ppOcrFailed) return ppOcr;
+            if (!PpOcrReader.IsInstalled(PpOcrDirectory)) return null;
+            try
+            {
+                ppOcr = new PpOcrReader(PpOcrDirectory);
+                SubtitleLog.Write("güçlü okuyucu: PP-OCR modeli yüklendi");
+            }
+            catch (Exception error)
+            {
+                // Model açılamadıysa (bozuk dosya, yerel kitaplık) her seferinde yeniden denenmez.
+                ppOcrFailed = true;
+                SubtitleLog.Write($"güçlü okuyucu: PP-OCR modeli açılamadı ({error.GetType().Name})");
+            }
+            return ppOcr;
+        }
+    }
     public bool HasOcrLanguage(string language) => WindowsOcrReader.HasLanguage(language);
 
     /// <summary>Android TV: TV açıkken ADB üzerinden uygulamanın açık ve PC'ye bağlı kalmasını sağlar. IP değişirse dinamik olarak ağda bulur.</summary>

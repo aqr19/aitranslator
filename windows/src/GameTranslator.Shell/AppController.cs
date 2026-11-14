@@ -974,7 +974,7 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         pipeline?.Reset();
         pipeline = null;
         ActiveSourceLanguage = settings.SourceLanguage;
-        var reader = services.MakeReader(settings.SourceLanguage);
+        var reader = services.MakeSubtitleReader(settings.SourceLanguage);
         activeReader = reader;
         OcrMissing = reader is null || !services.HasOcrLanguage(settings.SourceLanguage);
         if (reader is null) return;
