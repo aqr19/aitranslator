@@ -7,7 +7,7 @@
         xmlns:t="clr-namespace:GameTranslator.App.Theme"
         xmlns:local="clr-namespace:GameTranslator.App.Views"
         Title="{t:T 'Settings'}" Width="780" Height="880" MinWidth="560" MinHeight="480" ResizeMode="CanResize" ShowInTaskbar="False"
-        WindowStartupLocation="CenterOwner" Background="{DynamicResource backgroundBrush}" Foreground="{DynamicResource textPrimaryBrush}">
+        WindowStartupLocation="CenterOwner" Background="Transparent" Foreground="{DynamicResource textPrimaryBrush}">
     <DockPanel>
         <TextBlock DockPanel.Dock="Top" Text="{t:T 'Settings'}" Style="{StaticResource TitleText}" Margin="32,24,32,12" />
         <Border DockPanel.Dock="Bottom" Background="{DynamicResource surfaceBrush}" BorderBrush="{DynamicResource borderBrush}" BorderThickness="0,1,0,0" Padding="32,16">

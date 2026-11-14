@@ -9,8 +9,8 @@
     <theme:VisibleIf x:Key="VisibleIf" />
     <theme:Not x:Key="Not" />
 
-    <FontFamily x:Key="TextFont">Segoe UI Variable Text, Segoe UI</FontFamily>
-    <FontFamily x:Key="DisplayFont">Segoe UI Variable Display, Segoe UI</FontFamily>
+    <FontFamily x:Key="TextFont">pack://application:,,,/Assets/Fonts/#Inter, Segoe UI Variable Text, Segoe UI</FontFamily>
+    <FontFamily x:Key="DisplayFont">pack://application:,,,/Assets/Fonts/#Inter, Segoe UI Variable Display, Segoe UI</FontFamily>
     <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
 
     <!-- Yazı. Ana yazı rengi burada değil pencerede verilir (TextElement.Foreground): genel TextBlock
@@ -71,8 +71,8 @@
         <Setter Property="FontFamily" Value="{StaticResource TextFont}" />
         <Setter Property="FontSize" Value="{DynamicResource buttonFontSize}" />
         <Setter Property="FontWeight" Value="{DynamicResource buttonFontWeight}" />
-        <Setter Property="MinHeight" Value="{DynamicResource size.buttonHeight}" />
-        <Setter Property="Padding" Value="24,0" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="16,7" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="HorizontalAlignment" Value="Left" />
@@ -86,10 +86,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Frame" Property="Opacity" Value="0.92" />
+                            <Setter TargetName="Frame" Property="Opacity" Value="0.86" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Frame" Property="Opacity" Value="0.8" />
+                            <Setter TargetName="Frame" Property="Opacity" Value="0.7" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource accentTextBrush}" />
@@ -109,10 +109,25 @@
         <Setter Property="BorderThickness" Value="0" />
     </Style>
     <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
-        <Setter Property="Background" Value="{DynamicResource surfaceBrush}" />
+        <Setter Property="Background" Value="{DynamicResource cardStrongBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource textPrimaryBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource borderBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource hairlineBrush}" />
         <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <!-- Renkli yazılı düz düğme (iOS'taki metin düğmesi). -->
+    <Style x:Key="TintButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource accentSoftBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource accentTextBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <!-- Küçük hap düğme (satır içi eylemler: "Ayarla", "Yenile"). -->
+    <Style x:Key="PillButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+        <Setter Property="Background" Value="{DynamicResource cardStrongBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource textPrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Padding" Value="12,4" />
+        <Setter Property="FontSize" Value="12" />
     </Style>
     <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
         <Setter Property="Background" Value="{DynamicResource dangerBrush}" />
@@ -139,9 +154,9 @@
         <Setter Property="FontFamily" Value="{StaticResource TextFont}" />
         <Setter Property="FontSize" Value="{DynamicResource bodyFontSize}" />
         <Setter Property="Foreground" Value="{DynamicResource textPrimaryBrush}" />
-        <Setter Property="Background" Value="{DynamicResource surfaceBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource borderBrush}" />
-        <Setter Property="CaretBrush" Value="{DynamicResource textPrimaryBrush}" />
+        <Setter Property="Background" Value="{DynamicResource wellBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource hairlineBrush}" />
+        <Setter Property="CaretBrush" Value="{DynamicResource accentBrush}" />
         <Setter Property="Padding" Value="10,0" />
         <Setter Property="MinHeight" Value="40" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -172,14 +187,17 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
-                    <Border x:Name="Segment" Background="Transparent" CornerRadius="8" Padding="16,7" Margin="2">
+                    <Border x:Name="Segment" Background="Transparent" CornerRadius="9" Padding="14,7" Margin="2">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Segment" Property="Background" Value="{DynamicResource accentBrush}" />
-                            <Setter Property="Foreground" Value="{DynamicResource onAccentBrush}" />
+                            <Setter TargetName="Segment" Property="Background" Value="{DynamicResource cardStrongBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource textPrimaryBrush}" />
                             <Setter Property="FontWeight" Value="SemiBold" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="False">
+                            <Setter Property="Foreground" Value="{DynamicResource textSecondaryBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -187,30 +205,83 @@
         </Setter>
     </Style>
     <Style x:Key="SegmentGroup" TargetType="Border">
-        <Setter Property="Background" Value="{DynamicResource backgroundBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource borderBrush}" />
+        <Setter Property="Background" Value="{DynamicResource wellBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource hairlineBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="{DynamicResource radius.control}" />
         <Setter Property="HorizontalAlignment" Value="Left" />
     </Style>
 
     <Style TargetType="RadioButton">
-        <Setter Property="FontSize" Value="{DynamicResource bodyFontSize}" />
+        <Setter Property="FontFamily" Value="{StaticResource TextFont}" />
+        <Setter Property="FontSize" Value="14" />
         <Setter Property="Foreground" Value="{DynamicResource textPrimaryBrush}" />
         <Setter Property="Margin" Value="0,4" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                        <Grid Width="20" Height="20" VerticalAlignment="Center">
+                            <Ellipse x:Name="Ring" Stroke="{DynamicResource textTertiaryBrush}" StrokeThickness="1.5" Fill="Transparent" />
+                            <Ellipse x:Name="Dot" Width="10" Height="10" Fill="White" Visibility="Collapsed" />
+                        </Grid>
+                        <ContentPresenter Margin="9,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Ring" Property="Fill" Value="{DynamicResource accentBrush}" />
+                            <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource accentBrush}" />
+                            <Setter TargetName="Dot" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
-    <Style TargetType="ComboBox">
-        <Setter Property="FontSize" Value="{DynamicResource bodyFontSize}" />
+    <!-- Parola alanı (API anahtarı): metin alanıyla aynı görünüm. -->
+    <Style TargetType="PasswordBox">
+        <Setter Property="FontFamily" Value="{StaticResource TextFont}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Foreground" Value="{DynamicResource textPrimaryBrush}" />
+        <Setter Property="Background" Value="{DynamicResource wellBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource hairlineBrush}" />
+        <Setter Property="CaretBrush" Value="{DynamicResource accentBrush}" />
+        <Setter Property="Padding" Value="10,0" />
         <Setter Property="MinHeight" Value="36" />
-        <Setter Property="MinWidth" Value="200" />
-        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="PasswordBox">
+                    <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1" CornerRadius="{DynamicResource radius.control}">
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource accentTextBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
     <!-- Kaydırıcı: ince ray, dolu kısım sarı, yuvarlak tutamaç. -->
     <Style x:Key="SliderThumb" TargetType="Thumb">
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
-                    <Ellipse Width="20" Height="20" Fill="{DynamicResource surfaceBrush}" Stroke="{DynamicResource borderBrush}" StrokeThickness="1" />
+                    <Grid Width="22" Height="22">
+                        <Ellipse Fill="White">
+                            <Ellipse.Effect>
+                                <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.45" Color="Black" />
+                            </Ellipse.Effect>
+                        </Ellipse>
+                    </Grid>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -220,7 +291,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RepeatButton">
-                    <Border Height="4" CornerRadius="2" Background="{TemplateBinding Background}" />
+                    <Border Height="5" CornerRadius="2.5" Background="{TemplateBinding Background}" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -238,7 +309,7 @@
                             <Thumb Style="{StaticResource SliderThumb}" />
                         </Track.Thumb>
                         <Track.IncreaseRepeatButton>
-                            <RepeatButton Style="{StaticResource SliderFill}" Background="{DynamicResource borderBrush}" Command="Slider.IncreaseLarge" />
+                            <RepeatButton Style="{StaticResource SliderFill}" Background="{DynamicResource cardStrongBrush}" Command="Slider.IncreaseLarge" />
                         </Track.IncreaseRepeatButton>
                     </Track>
                 </ControlTemplate>
@@ -319,13 +390,185 @@
         </Setter>
     </Style>
 
+
+    <!-- Cam yüzeyler: kart (Glass), içe gömük alan (Well), hap rozet (Pill). -->
+    <Style x:Key="Glass" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource cardBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource hairlineBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{DynamicResource radius.card}" />
+        <Setter Property="Padding" Value="18,16" />
+    </Style>
+    <Style x:Key="Well" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource wellBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource hairlineBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="14" />
+    </Style>
+    <Style x:Key="Pill" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource cardStrongBrush}" />
+        <Setter Property="CornerRadius" Value="999" />
+        <Setter Property="Padding" Value="10,4" />
+    </Style>
+    <!-- Bölüm başlığı (iOS'taki gruplu liste başlığı): küçük, büyük harfli, ikincil renk. -->
+    <Style x:Key="SectionText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource textSecondaryBrush}" />
+        <Setter Property="Typography.Capitals" Value="AllSmallCaps" />
+    </Style>
+    <Style x:Key="LargeTitleText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+        <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+        <Setter Property="FontSize" Value="28" />
+        <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+
+    <!-- Onay kutusu: iOS anahtarı (açıkken yeşil), yanında etiketi. -->
+    <Style TargetType="CheckBox">
+        <Setter Property="FontFamily" Value="{StaticResource TextFont}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource textPrimaryBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                        <Border x:Name="Track" Width="38" Height="22" CornerRadius="11" Background="{DynamicResource cardStrongBrush}" VerticalAlignment="Center">
+                            <Ellipse x:Name="Knob" Width="18" Height="18" Fill="White" HorizontalAlignment="Left" Margin="2,0,0,0">
+                                <Ellipse.Effect>
+                                    <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.35" Color="Black" />
+                                </Ellipse.Effect>
+                            </Ellipse>
+                        </Border>
+                        <ContentPresenter Margin="9,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Track" Property="Background" Value="{DynamicResource successBrush}" />
+                            <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+                            <Setter TargetName="Knob" Property="Margin" Value="0,0,2,0" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Açılır liste: koyu, cam yüzeyli (Windows'un varsayılanı açık renk kalıyordu). -->
+    <Style TargetType="ComboBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource textPrimaryBrush}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBoxItem">
+                    <Border x:Name="Row" Background="Transparent" CornerRadius="8" Padding="10,7" Margin="2,1">
+                        <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Row" Property="Background" Value="{DynamicResource accentBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="ComboBox">
+        <Setter Property="FontFamily" Value="{StaticResource TextFont}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource textPrimaryBrush}" />
+        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="MinWidth" Value="160" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <ToggleButton x:Name="Opener" Focusable="False" ClickMode="Press"
+                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border Background="{DynamicResource cardStrongBrush}" BorderBrush="{DynamicResource hairlineBrush}" BorderThickness="1" CornerRadius="10">
+                                        <TextBlock Text="&#xE70D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="10" HorizontalAlignment="Right"
+                                                   VerticalAlignment="Center" Margin="0,0,11,0" Foreground="{DynamicResource textSecondaryBrush}" />
+                                    </Border>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                        <ContentPresenter IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}"
+                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                          Margin="12,0,30,0" VerticalAlignment="Center" HorizontalAlignment="Left" />
+                        <Popup x:Name="PART_Popup" Placement="Bottom" AllowsTransparency="True" Focusable="False" PopupAnimation="Fade"
+                               IsOpen="{TemplateBinding IsDropDownOpen}">
+                            <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" MaxHeight="320" Margin="0,6,0,0"
+                                    Background="#F21C1E26" BorderBrush="{DynamicResource borderBrush}" BorderThickness="1" CornerRadius="12" Padding="3">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <ItemsPresenter />
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Liste: saydam zemin, yuvarlak seçim. -->
+    <Style TargetType="ListBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource textPrimaryBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border x:Name="Row" Background="Transparent" CornerRadius="8" Padding="8,5">
+                        <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Row" Property="Background" Value="{DynamicResource cardBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Row" Property="Background" Value="{DynamicResource cardStrongBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style TargetType="ToolTip">
+        <Setter Property="FontFamily" Value="{StaticResource TextFont}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource textPrimaryBrush}" />
+        <Setter Property="MaxWidth" Value="340" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Border Background="#F21C1E26" BorderBrush="{DynamicResource borderBrush}" BorderThickness="1" CornerRadius="10" Padding="11,8">
+                        <ContentPresenter>
+                            <ContentPresenter.Resources>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="TextWrapping" Value="Wrap" />
+                                </Style>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Kart -->
     <Style TargetType="c:Card">
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="c:Card">
-                    <Border Background="{DynamicResource surfaceBrush}" BorderBrush="{DynamicResource borderBrush}" BorderThickness="1"
-                            CornerRadius="{DynamicResource radius.card}" Padding="{DynamicResource pad.xl}">
+                    <Border Background="{DynamicResource cardBrush}" BorderBrush="{DynamicResource hairlineBrush}" BorderThickness="1"
+                            CornerRadius="{DynamicResource radius.card}" Padding="18,16">
                         <StackPanel>
                             <TextBlock x:Name="Heading" Text="{TemplateBinding Title}" Style="{StaticResource HeadlineText}" Margin="0,0,0,12" />
                             <ContentPresenter />

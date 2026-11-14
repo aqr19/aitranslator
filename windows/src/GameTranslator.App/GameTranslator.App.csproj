@@ -27,6 +27,8 @@
     <Resource Include="Assets\logo.png" />
     <!-- ShellWindow.xaml pencere simgesi olarak bunu okur; ApplicationIcon yalnız exe simgesidir. -->
     <Resource Include="Assets\GameTranslator.ico" />
+    <!-- Inter (SIL Open Font License 1.1; Assets\Fonts\Inter-LICENSE): mobil uygulamayla aynı yazı tipi. -->
+    <Resource Include="Assets\Fonts\*.ttf" />
   </ItemGroup>
 
   <!-- TV uygulaması paketleri: dist/tv-app ve tv/packages altındaki paketleri tv-app/ klasörüne kopyalar -->
