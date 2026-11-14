@@ -48,6 +48,8 @@ public class ContinuationTranslatorTests
     [InlineData("Kratos: (Kratos: They should not be this close.", "They should not be this close.")]
     [InlineData("Lae'zel: Lae'ze: It cannot be helped. Come.", "It cannot be helped. Come.")]
     [InlineData("Faye: S This way.", "This way.")]
+    [InlineData("CAL • Think BD wants you to knock that down.", "Think BD wants you to knock that down.")]
+    [InlineData("BODE ·- Now I'm taking orders from a droid?", "Now I'm taking orders from a droid?")]
     [InlineData("Faye: Faye:S This way.", "This way.")]
     [InlineData("Kratos: I dream of the past.", "I dream of the past.")]
     [InlineData("Aloy: A machine is coming.", "A machine is coming.")]
@@ -85,6 +87,32 @@ public class ContinuationTranslatorTests
         var (sent, shown) = await Feed([.. lines]);
         Assert.Equal("It's been some time...", sent[^1]);
         Assert.Equal("Mimir: tr:It's been some time...", shown[^1]);
+    }
+
+    /// Simgeyle ayrılmış büyük harfli ad konuşmacı adı olur; sıradan büyük harfli sözcük ve madde imi dokunulmaz.
+    [Fact]
+    public async Task NameSeparatedByAnIconIsALabel()
+    {
+        var (_, shown) = await Feed(("CAL • Need a stim!", 0), ("• Collect the shards.", 20000), ("NO. Way out.", 40000),
+            ("BODE .- Let's take 'em down.", 60000), ("CAL *- Don't think so.", 80000), ("STORMTROOPER- Word is out.", 100000));
+        Assert.Equal("CAL: tr:Need a stim!", shown[0]);
+        Assert.Equal("tr:• Collect the shards.", shown[1]);
+        Assert.Equal("tr:NO. Way out.", shown[2]);
+        Assert.Equal("BODE: tr:Let's take 'em down.", shown[3]);
+        Assert.Equal("CAL: tr:Don't think so.", shown[4]);
+        Assert.Equal("STORMTROOPER: tr:Word is out.", shown[5]);
+    }
+
+    /// Ad olarak birkaç kez görülmüş büyük harfli sözcük ayraçsız gelse de addır ("BODE Using the Empire's tools").
+    [Fact]
+    public async Task KnownUppercaseNameWithoutSeparatorIsALabel()
+    {
+        var lines = Enumerable.Range(0, 4).Select(i => ($"BODE ·- Line number {i} it is.", (long)i * 20000)).ToList();
+        lines.Add(("BODE Using the Empire's tools.", 100000));
+        lines.Add(("BODE is a word too.", 120000));
+        var (_, shown) = await Feed([.. lines]);
+        Assert.Equal("BODE: tr:Using the Empire's tools.", shown[4]);
+        Assert.Equal("tr:BODE is a word too.", shown[5]);
     }
 
     /// Bir sonraki konuşmanın önce beliren adı (sözsüz "Mimir:") gösterilmez.

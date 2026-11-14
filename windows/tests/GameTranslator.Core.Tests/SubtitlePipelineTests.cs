@@ -222,6 +222,27 @@ public class SubtitlePipelineTests
             Task.FromResult(text.StartsWith("Kraven:", StringComparison.Ordinal) ? "Kraven: Ama hiçbir şey hissetmedin." : "Ama hiçbir şey hissetmedin.");
     }
 
+    /// <summary>Kaynağı aynen geri verir (büyü adı, özel ad).</summary>
+    private sealed class EchoTranslator : ITextTranslator
+    {
+        public Task<string> TranslateAsync(string text, CancellationToken cancellationToken = default) => Task.FromResult(text);
+    }
+
+    /// Çevirisi kendisiyle aynı dönen konuşmacılı satır ("Scott Coleman: Protego!") yine gösterilir; adsız aynı satır
+    /// zaten hedef dilde sayılır.
+    [Fact]
+    public async Task SpeakerLineWhoseTranslationIsTheSameIsStillShown()
+    {
+        var sender = new FakeSender();
+        var pipeline = new SubtitlePipeline(new FakeReader("Scott Coleman: Protego!", "Scott Coleman: Protego!", "Scott Coleman: Protego!"), new EchoTranslator(), sender);
+        await Run(pipeline, 3);
+        Assert.Equal(["Scott Coleman: Protego!"], sender.Sent);
+
+        var plain = new FakeSender();
+        await Run(new SubtitlePipeline(new FakeReader("Merhaba dünya.", "Merhaba dünya.", "Merhaba dünya."), new EchoTranslator(), plain), 3);
+        Assert.Empty(plain.Sent);
+    }
+
     [Fact]
     public async Task StableTextIsTranslatedAndSentOnce()
     {

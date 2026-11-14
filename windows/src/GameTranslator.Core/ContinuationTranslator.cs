@@ -39,7 +39,7 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
 
     public async Task<string> TranslateAsync(string text, CancellationToken cancellationToken = default)
     {
-        var source = Relabel(WithoutBareLabels(WithoutRepeatedLines(text)));
+        var source = Relabel(WithoutBareLabels(WithIconLabels(WithoutRepeatedLines(text))));
         // Birkaç kişi konuşuyorsa her konuşma kendi adıyla ayrı çevrilir (aynı anda); adlar çevrilmez.
         if (Turns(source) is { Count: > 1 } all)
         {
@@ -262,6 +262,28 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
     private static partial Regex BareLabel();
 
     /// <summary>Sözü olmayan ad satırı ("… / Mimir:": bir sonraki konuşmanın önce beliren adı) başka satır varsa atılır.</summary>
+    // Ayraç simge, yıldız, tire ya da bunların noktayla karışığıdır ("·-", ".-", "*-", "-"); tek başına nokta ayraç değildir.
+    [GeneratedRegex(@"^(?<name>\p{Lu}[\p{Lu}'’-]{2,14}(?: \p{Lu}[\p{Lu}'’-]{1,14})?)\s*(?=[•·▸►>▶‣◆■*\-–—.]*[•·▸►>▶‣◆■*\-–—])[•·▸►>▶‣◆■*\-–—.]+\s*(?<body>\S.*)$")]
+    private static partial Regex IconLabel();
+
+    /// <summary>
+    /// Bazı oyunlar adı iki nokta yerine simgeyle ayırır ("CAL • Think BD wants…", "BODE ·- Now I'm…"). Büyük harfli ad
+    /// ve ardından gelen simge "Ad: söz" biçimine çevrilir; yoksa ad sözün parçası sanılıp çevriliyordu.
+    /// </summary>
+    private static string WithIconLabels(string text)
+    {
+        var rows = text.Split('\n');
+        var changed = false;
+        for (var i = 0; i < rows.Length; i++)
+        {
+            var match = IconLabel().Match(rows[i].Trim());
+            if (!match.Success) continue;
+            rows[i] = $"{match.Groups["name"].Value}: {match.Groups["body"].Value.Trim()}";
+            changed = true;
+        }
+        return changed ? string.Join('\n', rows) : text;
+    }
+
     private static string WithoutBareLabels(string text)
     {
         var rows = text.Split('\n').Select(row => row.Trim()).Where(row => row.Length > 0).ToList();

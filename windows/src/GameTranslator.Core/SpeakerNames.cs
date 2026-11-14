@@ -117,13 +117,18 @@ public sealed class SpeakerNames
     public string? LabelIn(string first, string? next)
     {
         var token = first.TrimEnd('.', ',', ';', ':');
-        if (token.Length < 4 || !char.IsUpper(token[0])) return null;
+        if (token.Length < 3 || !char.IsUpper(token[0])) return null;
         List<string> names;
         lock (gate) names = [.. seen.Where(pair => pair.Value >= KnownAfter).Select(pair => pair.Key)
             .Concat(confirmed.Where(pair => pair.Value >= ConfirmedAfter).Select(pair => pair.Key)).Distinct()];
         foreach (var known in names)
         {
             // Sözcük sayısı aynı olmalı (iki sözcüklü ad iki sözcüklü parçayla karşılaştırılır).
+            // Büyük harfle yazılan bilinen ad ayraçsız da gelebilir ("BODE Using the Empire's tools"): ardından büyük harfle
+            // başlayan söz geliyorsa addır. Baş harfi büyük ad ise sözün içinde de geçebilir ("Jackie is here"), dokunulmaz.
+            if (token == known && known.Length >= 3 && known.All(c => !char.IsLetter(c) || char.IsUpper(c)) &&
+                next is { Length: > 0 } && char.IsUpper(next[0]))
+                return known;
             if (known.Length < 4 || known.Count(c => c == ' ') != token.Count(c => c == ' ') || token == known) continue;
             var extra = token.Length - known.Length;
             if (token.StartsWith(known, StringComparison.Ordinal) && extra is 1 or 2 && token[known.Length..].All(char.IsLower)) return known;

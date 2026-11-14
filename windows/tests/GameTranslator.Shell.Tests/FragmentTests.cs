@@ -29,4 +29,16 @@ public class FragmentTests
     [InlineData("GOOD LUCK", false)]
     public void UppercaseNonWordLineIsJunk(string text, bool junk) =>
         Assert.Equal(junk, AppController.IsCapsJunk(text, word => word is "no" or "run" or "stop" or "good" or "luck"));
+
+    /// Altyazı yeri öğrenilmeden ekranın kenarındaki yazı (görev yazısı) alınmaz; ortalı altyazı kalır.
+    [Fact]
+    public void OffCenterLinesAreDroppedBeforeTheBandIsKnown()
+    {
+        var area = new GameTranslator.Core.TextBox(0.08, 0.55, 0.92, 0.98);
+        var reading = new GameTranslator.Core.Reading([
+            new GameTranslator.Core.TextLine("Activate the statues", new GameTranslator.Core.TextBox(0.0, 0.1, 0.15, 0.15)),
+            new GameTranslator.Core.TextLine("Scott Coleman: Protego!", new GameTranslator.Core.TextBox(0.35, 0.8, 0.65, 0.85)),
+        ]);
+        Assert.Equal("Scott Coleman: Protego!", AppController.WithoutOffCenterLines(reading, area).Text);
+    }
 }

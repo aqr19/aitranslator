@@ -437,12 +437,26 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
     {
         var norm = TextMatch.Normalize(line);
         if (norm.Length == 0) return true;
+        // Başka konuşmacının satırı öncekinin yarım okuması değildir ("Vargas: "Just?"" önceki satırda "Vargas" ve
+        // "just" geçse de yenidir).
+        if (SpeakerOf(line) is { } speaker && !previous.Split('\n').Any(old => SpeakerOf(old) is not { } other || other == speaker))
+            return false;
         var flatPrevious = previous.Replace('\n', ' ');
         if (IsRereadOf(line, flatPrevious)) return true;
         if (previous.Split('\n').Any(old => TextMatch.Normalize(old) == norm || IsRereadOf(line, old))) return true;
         // Konuşmacı adı bir karede okunup ötekinde kaçabiliyor ("Kraven: Pathetic." ardından "Pathetic."): adsız okuma
         // aynı satırdır, yeni satır değil (aynı çeviri bir adlı bir adsız iki kez gösteriliyordu).
         return previous.Split('\n').Select(WithoutSpeaker).Any(bare => bare is not null && (TextMatch.Normalize(bare) == norm || IsRereadOf(line, bare)));
+    }
+
+    /// <summary>"Kraven: Pathetic." → "Kraven"; satır konuşmacı adıyla başlamıyorsa null.</summary>
+    private static string? SpeakerOf(string line)
+    {
+        var trimmed = line.Trim();
+        var colon = trimmed.IndexOf(": ", StringComparison.Ordinal);
+        if (colon is < 2 or > 30 || !char.IsUpper(trimmed[0])) return null;
+        var name = trimmed[..colon];
+        return name.Split(' ').Length <= 3 && name.All(c => char.IsLetter(c) || c is ' ' or '-' or '.' or '\'' or '’') ? name : null;
     }
 
     /// <summary>"Kraven: Pathetic." → "Pathetic."; satır konuşmacı adıyla başlamıyorsa null.</summary>
@@ -794,7 +808,9 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
         lock (gate)
         {
             if (request.Session != session) return;
-            var shouldSend = stabilizer.ShouldSend(source, translated);
+            // Çevirisi kendisiyle aynı dönen satır çoğunlukla zaten hedef dildedir; ama konuşmacısı belli satırda bu, çevrilmeyen
+            // bir ad ya da büyüdür ("Scott Coleman: Protego!"). O satır da gösterilir: yoksa TV'de önceki çeviri kalıyordu.
+            var shouldSend = stabilizer.ShouldSend(source, translated) || source.Split('\n').Any(row => SpeakerOf(row) is not null);
             Remember(request.Number, source, shouldSend ? translated : null);
             if (request.Number <= lastShown || !shouldSend || request.Superseded)
             {

@@ -1016,8 +1016,8 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         // Şeride düşen arayüz yazısı (envanter çubuğu, savaş günlüğü) kısa sürede aynen yinelenir ve cümle gibi
         // bitmez; üç kez çevrildikten sonra bir süre okunmaz.
         var repeats = new RepeatedText();
-        built.LineFilter = (read, area) => WithoutGarbageLines(repeats.Without(settings.AutoRegion && autoBand is { } band
-            ? SubtitleFinder.Grow(read, area, (band.Item1, band.Item2))
+        built.LineFilter = (read, area) => WithoutGarbageLines(repeats.Without(settings.AutoRegion
+            ? autoBand is { } band ? SubtitleFinder.Grow(read, area, (band.Item1, band.Item2)) : WithoutOffCenterLines(read, area)
             : read));
         built.PairShown += (source, _) =>
         {
@@ -1084,6 +1084,18 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
     /// okunuyor ve okunan her bozuk hâli ayrı çeviri olarak gösteriliyordu). Hiç düzgün satır yoksa okuma olduğu gibi
     /// kalır; bütünüyle bozuk okumayı okuma hattının kendi denetimi ele alır.
     /// </summary>
+    /// <summary>
+    /// Altyazının yeri henüz öğrenilmeden geniş alan okunur; orada ekranın ortasından belirgin biçimde uzaktaki satırlar
+    /// (sol üstteki görev yazısı "Activate the statues", köşe göstergeleri) altyazı sayılmaz.
+    /// </summary>
+    public static Reading WithoutOffCenterLines(Reading reading, TextBox area)
+    {
+        if (reading.Lines.Count == 0) return reading;
+        var kept = reading.Lines.Where(line => line.Box is not { } box ||
+            Math.Abs((box.PlacedIn(area).Left + box.PlacedIn(area).Right) / 2 - 0.5) <= 0.2).ToList();
+        return kept.Count == reading.Lines.Count ? reading : new Reading(kept);
+    }
+
     /// <summary>
     /// Zemindeki dokudan ya da filigrandan okunan, tek "sözcüklük", tümü büyük harfli ve gerçek sözcük olmayan satır
     /// ("IETTET", "HIITIIE"). Büyük harfli gerçek sözcük ("NO!", "RUN") ve kısaltmalar (en çok 3 harf) kalır.
