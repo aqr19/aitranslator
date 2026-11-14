@@ -26,6 +26,20 @@ public class RepeatedTextTests
         Assert.Equal("We must go to the helm.", repeats.Without(Read(bar, "We must go to the helm.")).Text);
     }
 
+    /// Tümü büyük harfli reklam ya da pano yazısı ünlemle bitse de yinelenince engellenir.
+    [Fact]
+    public void UppercaseBillboardIsBlockedWhenRepeated()
+    {
+        long time = 0;
+        var repeats = new RepeatedText(() => time);
+        for (var i = 0; i < RepeatedText.Times; i++)
+        {
+            repeats.Note("GET YOURS: TODAY!");
+            time += 3000;
+        }
+        Assert.Equal("", repeats.Without(Read("GET YOURS: TODAY!")).Text);
+    }
+
     [Fact]
     public void SpokenLinesMayRepeat()
     {

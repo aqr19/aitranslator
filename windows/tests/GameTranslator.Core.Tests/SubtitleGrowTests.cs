@@ -46,6 +46,18 @@ public class SubtitleGrowTests
         Assert.Equal("Tomas: Keep your head down.", SubtitleFinder.Grow(reading, Area, Band).Text);
     }
 
+    /// Şeritle aynı yükseklikteki köşe yazısı (sağ alttaki tuş ipuçları) altyazı değildir.
+    [Fact]
+    public void CornerTextAtTheBandHeightIsDropped()
+    {
+        var reading = new Reading([
+            Line("Geralt: Ground's black, saturated with blood.", 0.82),
+            Line("Witcher Senses Hold", 0.80, x: 0.86, width: 0.1),
+            Line("Call Horse Press Twice!", 0.84, x: 0.86, width: 0.1)]);
+        Assert.Equal("Geralt: Ground's black, saturated with blood.", SubtitleFinder.Grow(reading, Area, Band).Text);
+        Assert.Equal("", SubtitleFinder.Grow(new Reading([Line("Call Horse Press Twice!", 0.84, x: 0.86, width: 0.1)]), Area, Band).Text);
+    }
+
     [Fact]
     public void NothingInTheBandMeansNoSubtitle()
     {

@@ -33,6 +33,11 @@ public sealed class SubtitleFinder
     public const int StaticAfterMs = 9000;
     /// <summary>Satırın ortası ekranın ortasından en çok bu kadar uzak olabilir.</summary>
     public const double CenterTolerance = 0.12;
+    /// <summary>
+    /// Okunan geniş alandan altyazı seçilirken satırın ortası ekranın ortasından en çok bu kadar uzak olabilir (sola yaslı
+    /// uzun altyazı satırı ve iki konuşmacının yan yana satırları için <see cref="CenterTolerance"/>'tan geniş).
+    /// </summary>
+    public const double CoreCenterTolerance = 0.22;
     /// <summary>Ortaları birbirine bu kadar yakın satırlar aynı yerdedir (iki satırlı altyazının iki satırı).</summary>
     private const double SamePlace = 0.05;
 
@@ -96,11 +101,13 @@ public sealed class SubtitleFinder
         var lines = reading.Lines.Where(line => line.Box is not null).ToList();
         if (lines.Count == 0) return reading;
         TextBox Place(TextLine line) => line.Box!.Value.PlacedIn(area);
+        // Çekirdek satır şeritte ve ekranın ortasına yakın olmalı: şeritle aynı yükseklikteki köşe yazıları (sağ alttaki tuş
+        // ipuçları "Call Horse Press Twice", "Witcher Senses Hold") altyazı değildir.
         var kept = lines.Where(line =>
         {
             var box = Place(line);
             var middle = (box.Top + box.Bottom) / 2;
-            return middle >= band.Top && middle <= band.Bottom;
+            return middle >= band.Top && middle <= band.Bottom && Math.Abs(((box.Left + box.Right) / 2) - 0.5) <= CoreCenterTolerance;
         }).ToList();
         var grew = kept.Count > 0;
         while (grew)

@@ -127,7 +127,7 @@ public sealed class Reading
         // bir cümle başlatmalı ("Sojiro / will be taking care of me." sarılmış tek cümledir).
         if (!IsSpeakerLine(Lines[0].Text) && !(IsTitleName(Lines[0].Text) && StartsSentence(Lines[1].Text) && NameBoxAbove(Lines[0], Lines[1])))
             return this;
-        var (name, first) = (Lines[0], Lines[1]);
+        var (name, first) = (Lines[0] with { Text = Lines[0].Text.Trim().TrimEnd('.') }, Lines[1]);
         var box = name.Box is { } a && first.Box is { } b ? a.Union(b) : first.Box ?? name.Box;
         return new Reading([first with { Text = $"{name.Text.Trim()}: {first.Text.Trim()}", Box = box }, .. Lines.Skip(2)]);
     }
@@ -140,12 +140,16 @@ public sealed class Reading
         "why", "how", "who", "where", "really", "maybe", "never", "help", "quiet", "enough", "again", "here", "there",
     };
 
-    /// <summary>Baş harfi büyük, gerisi küçük, noktalamasız tek sözcük: "Sojiro", "Manager".</summary>
+    /// <summary>
+    /// Baş harfi büyük, gerisi küçük bir iki sözcük: "Sojiro", "Manager", "Tifa's Dad". Sonda okunan nokta ("Barret.")
+    /// sayılmaz.
+    /// </summary>
     internal static bool IsTitleName(string text)
     {
-        var word = text.Trim();
-        return word.Length is >= 3 and <= 16 && char.IsUpper(word[0]) && !Interjections.Contains(word) &&
-               word.Skip(1).All(c => char.IsLower(c) || c is '-' or '\'' or '’');
+        var name = text.Trim().TrimEnd('.');
+        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return words.Length is 1 or 2 && name.Length is >= 3 and <= 20 && !Interjections.Contains(words[0]) &&
+               words.All(word => word.Length >= 2 && char.IsUpper(word[0]) && word.Skip(1).All(c => char.IsLower(c) || c is '-' or '\'' or '’'));
     }
 
     /// <summary>Ad kutusu sözün sol üstünde mi: sol kenarı sözünkinden sağda değil, ortası belirgin biçimde solda.</summary>
@@ -274,6 +278,12 @@ public static class ButtonPrompts
             .ToList();
         if (tokens.Count == 0) return false;
         if (IsInterfaceBar(line)) return true;
+        // Tuş simgesi noktalama okunmuş etkileşim yazısı (":Read message", ":Pillage remains"): simge, ardından cümle gibi
+        // bitmeyen kısa bir eylem.
+        var trimmedLine = line.TrimStart();
+        if (trimmedLine.Length > 1 && trimmedLine[0] is ':' or ';' or '•' or '©' or '®' && char.IsUpper(trimmedLine.TrimStart(':', ';', '•', '©', '®', ' ')[0]) &&
+            tokens.Count <= 5 && !SubtitleStabilizer.EndsSentence(line))
+            return true;
         var first = tokens[0];
         var words = tokens.Count(token => !Buttons.Contains(token) && token.Any(char.IsLetter));
 

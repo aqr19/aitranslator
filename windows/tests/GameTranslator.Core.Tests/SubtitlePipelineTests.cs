@@ -241,6 +241,14 @@ public class SubtitlePipelineTests
         var plain = new FakeSender();
         await Run(new SubtitlePipeline(new FakeReader("Merhaba dünya.", "Merhaba dünya.", "Merhaba dünya."), new EchoTranslator(), plain), 3);
         Assert.Empty(plain.Sent);
+
+        // Büyük harfli jenerik satırı konuşma değildir.
+        var credits = new FakeSender();
+        await Run(new SubtitlePipeline(new FakeReader("PRODUCTION DIRECTOR: SOPHIE BUHLER", "PRODUCTION DIRECTOR: SOPHIE BUHLER", "PRODUCTION DIRECTOR: SOPHIE BUHLER"), new EchoTranslator(), credits), 3);
+        Assert.Empty(credits.Sent);
+        var particle = new FakeSender();
+        await Run(new SubtitlePipeline(new FakeReader("EXECUTIVE PRODUCER: GUILLAUME de FONDAUMIERE", "EXECUTIVE PRODUCER: GUILLAUME de FONDAUMIERE", "EXECUTIVE PRODUCER: GUILLAUME de FONDAUMIERE"), new EchoTranslator(), particle), 3);
+        Assert.Empty(particle.Sent);
     }
 
     [Fact]

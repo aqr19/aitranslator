@@ -73,6 +73,9 @@ public class SubtitleBlockTests
     [InlineData("Select) O Actions Sort Tooltips (OFF) O Close", true)]
     [InlineData("Bonus Action A I Movement I 5.9", true)]
     [InlineData("Movement 1.8 lay on Hands", true)]
+    [InlineData(":Read message", true)]
+    [InlineData(":Pillage remains / :Switch action", true)]
+    [InlineData(": Yes, we leave now.", false)]
     [InlineData("It costs 2.5 coins.", false)]
     [InlineData("We waited 1.5 hours for the boat to come back to the harbor", false)]
     public void BarOfSeveralPromptsIsAPrompt(string line, bool prompt) => Assert.Equal(prompt, ButtonPrompts.IsPrompt(line));

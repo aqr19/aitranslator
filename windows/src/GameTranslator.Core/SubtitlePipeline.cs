@@ -449,6 +449,13 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
         return previous.Split('\n').Select(WithoutSpeaker).Any(bare => bare is not null && (TextMatch.Normalize(bare) == norm || IsRereadOf(line, bare)));
     }
 
+    /// <summary>Harflerinin en az üçte biri küçük harf ("EXECUTIVE PRODUCER: GUILLAUME de FONDAUMIERE" değil).</summary>
+    private static bool MostlyLowercase(string row)
+    {
+        var letters = row.Where(char.IsLetter).ToList();
+        return letters.Count > 0 && letters.Count(char.IsLower) * 3 >= letters.Count;
+    }
+
     /// <summary>"Kraven: Pathetic." → "Kraven"; satır konuşmacı adıyla başlamıyorsa null.</summary>
     private static string? SpeakerOf(string line)
     {
@@ -810,7 +817,9 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
             if (request.Session != session) return;
             // Çevirisi kendisiyle aynı dönen satır çoğunlukla zaten hedef dildedir; ama konuşmacısı belli satırda bu, çevrilmeyen
             // bir ad ya da büyüdür ("Scott Coleman: Protego!"). O satır da gösterilir: yoksa TV'de önceki çeviri kalıyordu.
-            var shouldSend = stabilizer.ShouldSend(source, translated) || source.Split('\n').Any(row => SpeakerOf(row) is not null);
+            // Sözünde küçük harf olmalı: büyük harfli jenerik satırı ("PRODUCTION DIRECTOR: SOPHIE BUHLER") konuşma değildir.
+            var shouldSend = stabilizer.ShouldSend(source, translated) ||
+                             source.Split('\n').Any(row => SpeakerOf(row) is not null && MostlyLowercase(row));
             Remember(request.Number, source, shouldSend ? translated : null);
             if (request.Number <= lastShown || !shouldSend || request.Superseded)
             {

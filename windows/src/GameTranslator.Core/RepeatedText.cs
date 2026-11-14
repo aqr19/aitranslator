@@ -64,6 +64,9 @@ public sealed class RepeatedText(Func<long>? clock = null)
     /// <summary>Konuşma gibi mi: cümle sonu işaretiyle biter ya da "Ad: söz" biçimindedir.</summary>
     private static bool LooksSpoken(string line)
     {
+        // Tümü büyük harfli satır (reklam panosu "GET YOURS: TODAY!", jenerik) ünlemle bitse de konuşma sayılmaz.
+        var letters = line.Where(char.IsLetter).ToList();
+        if (letters.Count >= 4 && letters.All(char.IsUpper)) return false;
         if (SubtitleStabilizer.EndsSentence(line)) return true;
         var colon = line.IndexOf(": ", StringComparison.Ordinal);
         return colon is >= 2 and <= 30 && char.IsUpper(line[0]);

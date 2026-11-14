@@ -29,6 +29,9 @@ public class SpeakerLineTests
         Assert.Equal("Sojiro\nI know.", Boxed(("Sojiro", 0.45, 0.55), ("I know.", 0.46, 0.54)).WithSpeakerLine().Text);
         Assert.Equal("Yeah\nI know what you did.", Boxed(("Yeah", 0.20, 0.28), ("I know what you did.", 0.21, 0.70)).WithSpeakerLine().Text);
         Assert.Equal("Sojiro\nwill be taking care of me.", Boxed(("Sojiro", 0.20, 0.30), ("will be taking care of me.", 0.21, 0.70)).WithSpeakerLine().Text);
+        // İki sözcüklü ad ve sonda okunmuş nokta.
+        Assert.Equal("Tifa's Dad: You can still back out.", Boxed(("Tifa's Dad", 0.30, 0.40), ("You can still back out.", 0.31, 0.70)).WithSpeakerLine().Text);
+        Assert.Equal("Barret: Our reasons, huh?", Boxed(("Barret.", 0.30, 0.37), ("Our reasons, huh?", 0.31, 0.70)).WithSpeakerLine().Text);
     }
 
     [Fact]
