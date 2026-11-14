@@ -369,6 +369,30 @@ public sealed class LiveServices : IAppServices
         };
     }
 
+    /// <summary>
+    /// Güçlü okuyucunun modelleri (PP-OCR, ~24 MB) yoksa uygulama açılışında arka planda indirilir; dosyalar boyut ve
+    /// SHA-256 ile doğrulanır (<see cref="ModelStore"/>). İndirme bitince sonraki "Çeviriyi Başlat"ta kullanılır. İnternet
+    /// yoksa ya da indirme başarısız olursa uygulama yalnız Windows'un okuyucusuyla çalışır; sonraki açılışta yeniden denenir.
+    /// </summary>
+    public static void DownloadReaderModelsInBackground()
+    {
+        var store = new ModelStore(PpOcrDirectory, [.. PpOcrReader.Files, PpOcrReader.EnglishFile]);
+        if (store.IsInstalled) return;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                SubtitleLog.Write("güçlü okuyucu: modeller indiriliyor");
+                await store.DownloadAsync(null, CancellationToken.None);
+                SubtitleLog.Write("güçlü okuyucu: modeller indirildi");
+            }
+            catch (Exception error)
+            {
+                SubtitleLog.Write($"güçlü okuyucu: modeller indirilemedi ({error.GetType().Name})");
+            }
+        });
+    }
+
     private static PpOcrReader? PpOcrShared(string language)
     {
         lock (PpOcrGate)

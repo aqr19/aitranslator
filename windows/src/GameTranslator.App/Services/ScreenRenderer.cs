@@ -35,10 +35,11 @@ public static class ScreenRenderer
         {
             ThemeManager.Apply(app.Resources, dark);
             var suffix = dark ? "koyu" : "acik";
-            foreach (var step in Enum.GetValues<OnboardingStep>().Where(s => s != OnboardingStep.Done))
+            for (var step = 1; step <= 4; step++)
             {
-                var controller = Demo(step);
-                Save(() => new OnboardingView(controller), 640, 720, Path.Combine(folder, $"adim-{(int)step + 1}-{step}-{suffix}.png"));
+                var controller = Demo(OnboardingStep.Welcome);
+                var n = step;
+                Save(() => { var v = new OnboardingView(controller); v.ShowStep(n); return v; }, 640, 720, Path.Combine(folder, $"adim-{step}-{suffix}.png"));
             }
             Save(() => new MainView(Demo(OnboardingStep.Done)), 640, 720, Path.Combine(folder, $"ana-{suffix}.png"));
             // Uygulamanın gerçek penceresi: XAML'ı (simge dahil) açılıştaki gibi yüklenir.

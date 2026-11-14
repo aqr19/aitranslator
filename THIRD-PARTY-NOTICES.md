@@ -82,7 +82,7 @@ The model is used unmodified (int8 quantised ONNX files as published by onnx-com
 |---|---|---|
 | PP-OCRv4 text detection and recognition models (`ch_PP-OCRv4_det_infer.onnx`, `ch_PP-OCRv4_rec_infer.onnx`) and PP-OCRv3 English recognition model (`en_PP-OCRv3_rec_infer.onnx`) | Apache-2.0 | PaddleOCR, PaddlePaddle Authors — https://github.com/PaddlePaddle/PaddleOCR; ONNX conversion by RapidOCR — https://github.com/RapidAI/RapidOCR, files from https://huggingface.co/SWHL/RapidOCR |
 
-The models are not part of the installer. When the first two files are present in
+The models are not part of the installer; the Windows app downloads them in the background on first start. When the first two files are present in
 `%LOCALAPPDATA%\GameTranslator\models\ppocr`, the Windows app re-reads subtitle lines that Windows' own text recognition
 got wrong with them; when the English recognition model is also present and the game language is English, each line is
 read with both recognition models and the better reading is kept. They are used unmodified; the app checks their size

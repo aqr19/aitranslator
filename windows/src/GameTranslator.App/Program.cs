@@ -17,7 +17,7 @@ public static class Program
 
         // Eğer arka planda takılı kalmış eski bir kopya varsa port 8787'yi ve TV bağlantısını kilitlemesin diye sonlandır
         // (Geliştirme araçları (--replay, --repair) kurulu uygulamanın yanında çalışır; ona dokunmaz.)
-        if (args is not (["--replay", ..] or ["--repair", ..])) try
+        if (args is not (["--replay", ..] or ["--repair", ..] or ["--render-screens", ..])) try
         {
             var current = System.Diagnostics.Process.GetCurrentProcess();
             foreach (var p in System.Diagnostics.Process.GetProcessesByName("GameTranslator"))

@@ -91,5 +91,7 @@ public partial class App : Application
         var window = new ShellWindow(controller);
         MainWindow = window;
         window.Show();
+        // Güçlü okuyucunun modelleri kurulumda yok; ilk açılışta arka planda iner.
+        LiveServices.DownloadReaderModelsInBackground();
     }
 }
