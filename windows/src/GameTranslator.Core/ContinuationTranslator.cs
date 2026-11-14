@@ -62,7 +62,10 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
     private static List<(string? Speaker, string Body)>? Turns(string source)
     {
         var rows = source.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (rows.Count(row => SpeakerLabel().IsMatch(row)) < 2) return null;
+        // İki adlı satır ya da adsız bir satırın (önceki konuşmanın ekranda kalan sonu) ardından gelen adlı satır.
+        var labelled = rows.Count(row => SpeakerLabel().IsMatch(row));
+        var tailThenSpeaker = rows.Length > 1 && !SpeakerLabel().IsMatch(rows[0]) && labelled >= 1;
+        if (labelled < 2 && !tailThenSpeaker) return null;
         var turns = new List<(string? Speaker, string Body)>();
         foreach (var row in rows)
         {

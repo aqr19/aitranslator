@@ -1001,7 +1001,17 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         // Cümlenin başı okunamamış parça ("bad at surrendering.") bozuk okumadır: tamamı gelsin diye bekletilir;
         // çok kısaysa ya da sözcüklerinin çoğu gerçek değilse hiç çevrilmez.
         var misread = built.LooksMisread;
-        built.LooksMisread = text => misread(text) || Misspelling.IsOrphanFragment(text, built.LastPair?.Source);
+        // Oyun her satırda konuşmacı adı gösteriyorsa (son üç satır adlı geldiyse) adsız okunan satır büyük olasılıkla
+        // adı kaçırılmış okumadır: adlı okuması gelsin diye kısa süre bekletilir (aynı satır önce adsız sonra adlı
+        // iki kez gösteriliyordu).
+        var speakerStreak = 0;
+        built.LooksMisread = text => misread(text) || Misspelling.IsOrphanFragment(text, built.LastPair?.Source) ||
+            (Volatile.Read(ref speakerStreak) >= 3 && !text.Contains('\n') && !HasSpeakerLabel(text));
+        built.PairShown += (source, _) =>
+        {
+            if (HasSpeakerLabel(source)) Interlocked.Increment(ref speakerStreak);
+            else Volatile.Write(ref speakerStreak, 0);
+        };
         built.IsGarbage = text => (SubtitlePipeline.ExtraGarbageCheck?.Invoke(text) ?? false) ||
             (Misspelling.IsOrphanFragment(text, built.LastPair?.Source) && text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length <= 3);
         // Altyazı günlüğü (altyazi.log): okunan satırlar ve akıbetleri; gösterilen çevirinin kendisi de yazılır.
@@ -1026,6 +1036,15 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         built.TranslationResult += error => post(() => TranslatorStatus = error ?? TranslatorStatus.Ready);
         built.SpeechReady += lines => post(() => Speak(lines));
         pipeline = built;
+    }
+
+    /// <summary>Satır "Ad: söz" biçiminde mi (ad büyük harfle başlar, en çok üç sözcüktür).</summary>
+    private static bool HasSpeakerLabel(string text)
+    {
+        var line = text.TrimStart();
+        var colon = line.IndexOf(": ", StringComparison.Ordinal);
+        return colon is >= 2 and <= 30 && char.IsUpper(line[0]) && line[..colon].Split(' ').Length <= 3 &&
+               line[..colon].All(c => char.IsLetter(c) || c is ' ' or '-' or '.' or '\'' or '’');
     }
 
     private ITextTranslator MakeTranslator()

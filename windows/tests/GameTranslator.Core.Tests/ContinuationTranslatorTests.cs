@@ -48,6 +48,15 @@ public class ContinuationTranslatorTests
         Assert.Equal("DUKE: tr:I cannot believe my eyes! You gave us a scare, brother.\nDAMIR: tr:Move, Duke!", shown[0]);
     }
 
+    /// Önceki konuşmanın ekranda kalan sonu ile yeni konuşmacının satırı birlikte okunursa ad yine çevrilmez.
+    [Fact]
+    public async Task TailOfThePreviousLineFollowedByASpeakerIsSplitToo()
+    {
+        var (sent, shown) = await Feed(("all gone now.\nGUARD: Watch the gate closely,\nand call out if you see anyone!", 0));
+        Assert.Equal(["Watch the gate closely, and call out if you see anyone!", "all gone now."], sent.Order().ToList());
+        Assert.Equal("tr:all gone now.\nGUARD: tr:Watch the gate closely, and call out if you see anyone!", shown[0]);
+    }
+
     [Fact]
     public async Task SentenceSplitOverSeveralSubtitlesIsTranslatedWhole()
     {
