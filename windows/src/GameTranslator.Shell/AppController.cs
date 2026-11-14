@@ -979,7 +979,16 @@ public sealed class AppController : INotifyPropertyChanged, IDisposable
         OcrMissing = reader is null || !services.HasOcrLanguage(settings.SourceLanguage);
         if (reader is null) return;
         // Art arda altyazılara bölünen cümle bütün olarak çevrilir (hangi motor seçilirse seçilsin).
-        var built = new SubtitlePipeline(reader, new ContinuationTranslator(MakeTranslator(), looksMisread: text => SubtitlePipeline.ExtraMisreadCheck?.Invoke(text) ?? false), server, new ReadScheduler());
+        // Kısa ünlemler ("Well?", "Hurry!") İngilizceden Türkçeye hazır karşılıkla çevrilir; çevirmenler bağlamsız kısa
+        // satırı sözlük anlamıyla çeviriyordu ("Kuyu?", "Acele etmek!").
+        var phrasebook = settings.SourceLanguage.StartsWith("en", StringComparison.OrdinalIgnoreCase) &&
+                         settings.TargetLanguage.StartsWith("tr", StringComparison.OrdinalIgnoreCase)
+            ? ShortPhrases.Translate
+            : (Func<string, string?>?)null;
+        var built = new SubtitlePipeline(reader, new ContinuationTranslator(MakeTranslator(), looksMisread: text => SubtitlePipeline.ExtraMisreadCheck?.Invoke(text) ?? false)
+        {
+            Phrasebook = phrasebook,
+        }, server, new ReadScheduler());
         // Paket yalnız oynanan oyunun paketiyse kullanılır (başka oyunun genel satırları yanlış çeviri basıyordu).
         var packGate = new PackGate();
         built.PackLookup = text => packGate.Filter(text, CommunityPatchManager.Shared.Match(text));

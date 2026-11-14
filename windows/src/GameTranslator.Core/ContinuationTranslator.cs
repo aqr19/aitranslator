@@ -25,6 +25,12 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
     private (string? Speaker, string Body, string Raw, long At)? previous;
     private readonly SpeakerNames names = new();
 
+    /// <summary>
+    /// Kısa ünlemlerin hazır karşılığı (<see cref="ShortPhrases.Translate"/>; İngilizce→Türkçe). Verilirse ve sözün
+    /// karşılığı varsa söz çevirmene gönderilmez.
+    /// </summary>
+    public Func<string, string?>? Phrasebook { get; init; }
+
     public bool Prefetches => inner.Prefetches;
     public void Prefetch(string text) => inner.Prefetch(text);
     public IReadOnlyList<SpokenLine> SpokenLines(string text) => inner.SpokenLines(text);
@@ -77,7 +83,8 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
         // Bozuk okunmuş ad ("Minnir") oyunda sık geçen doğrusuna ("Mimir") çevrilir.
         if (speaker is not null) lock (gate) speaker = names.Canonical(speaker);
         if (body.Length == 0) return speaker is null ? "" : speaker + ":";
-        var translated = (await inner.TranslateAsync(body, cancellationToken).ConfigureAwait(false)).Trim();
+        var translated = Phrasebook?.Invoke(body) ??
+                         ShortPhrases.FixShouting(body, (await inner.TranslateAsync(body, cancellationToken).ConfigureAwait(false)).Trim());
         return speaker is null ? translated : $"{speaker}: {translated}";
     }
 
