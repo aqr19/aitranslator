@@ -4,134 +4,140 @@ namespace GameTranslator.Core.Tests;
 
 public class ContinuationTranslatorTests
 {
+    /// <summary>Kendisine gelen metni kaydeder ve başına "tr:" koyarak döndürür.</summary>
     private sealed class Recorder : ITextTranslator
     {
         public List<string> Seen { get; } = [];
 
         public Task<string> TranslateAsync(string text, CancellationToken cancellationToken = default)
         {
-            Seen.Add(text);
+            lock (Seen) Seen.Add(text);
             return Task.FromResult("tr:" + text);
         }
     }
 
-    private static async Task<List<string>> Feed(params (string Text, long At)[] lines)
+    /// <summary>Satırları sırayla çevirir; (çevirmene giden metinler, dönen çeviriler).</summary>
+    private static async Task<(List<string> Sent, List<string> Shown)> Feed(params (string Text, long At)[] lines)
     {
         long time = 0;
         var recorder = new Recorder();
         var translator = new ContinuationTranslator(recorder, () => time);
+        var shown = new List<string>();
         foreach (var (text, at) in lines)
         {
             time = at;
-            await translator.TranslateAsync(text);
+            shown.Add(await translator.TranslateAsync(text));
         }
-        return recorder.Seen;
+        return (recorder.Seen, shown);
+    }
+
+    /// Ad çevirmene verilmez; çevirmen onu sıradan sözcük sanıp çeviriyordu ("ANNA" → "ANNE").
+    [Fact]
+    public async Task SpeakerNameIsKeptAsItIsAndOnlyTheSpeechIsTranslated()
+    {
+        var (sent, shown) = await Feed(("ANNA: Are you all right?", 0), ("Careful now.", 5000));
+        Assert.Equal(["Are you all right?", "Careful now."], sent);
+        Assert.Equal(["ANNA: tr:Are you all right?", "tr:Careful now."], shown);
+    }
+
+    [Fact]
+    public async Task SeveralSpeakersAreTranslatedSeparatelyWithTheirNames()
+    {
+        var (sent, shown) = await Feed(("DUKE: I cannot believe my eyes!\nYou gave us a scare, brother.\nDAMIR: Move, Duke!", 0));
+        Assert.Equal(["I cannot believe my eyes! You gave us a scare, brother.", "Move, Duke!"], sent.Order().ToList());
+        Assert.Equal("DUKE: tr:I cannot believe my eyes! You gave us a scare, brother.\nDAMIR: tr:Move, Duke!", shown[0]);
     }
 
     [Fact]
     public async Task SentenceSplitOverSeveralSubtitlesIsTranslatedWhole()
     {
-        var seen = await Feed(
-            ("Flint Marko: You're the ones", 0),
-            ("Flint Marko: who are gonna need help...", 2000),
-            ("Flint Marko: when they come for you.", 5000),
-            ("Spider-Man: Come for us?", 9000));
+        var (sent, shown) = await Feed(
+            ("Marko: You are the ones", 0),
+            ("Marko: who are going to need help...", 2000),
+            ("Marko: when they come for you.", 5000),
+            ("Elena: Come for us?", 9000));
         Assert.Equal([
-            "Flint Marko: You're the ones",
-            "Flint Marko: You're the ones who are gonna need help...",
-            "Flint Marko: You're the ones who are gonna need help... when they come for you.",
-            "Spider-Man: Come for us?"], seen);
+            "You are the ones",
+            "You are the ones who are going to need help...",
+            "You are the ones who are going to need help... when they come for you.",
+            "Come for us?"], sent);
+        Assert.Equal("Marko: tr:You are the ones who are going to need help... when they come for you.", shown[2]);
+        Assert.Equal("Elena: tr:Come for us?", shown[3]);
     }
 
     [Fact]
     public async Task ContinuationWithoutSpeakerLabelKeepsTheSpeaker()
     {
-        var seen = await Feed(("Kraven: You grow slow in your old age,", 0), ("old friend.", 2500));
-        Assert.Equal("Kraven: You grow slow in your old age, old friend.", seen[1]);
+        var (sent, shown) = await Feed(("Kraven: You grow slow in your old age,", 0), ("old friend.", 2500));
+        Assert.Equal("You grow slow in your old age, old friend.", sent[1]);
+        Assert.Equal("Kraven: tr:You grow slow in your old age, old friend.", shown[1]);
     }
 
     [Fact]
     public async Task FinishedSentencesAnotherSpeakerAndLateLinesStaySeparate()
     {
-        var seen = await Feed(
+        var (sent, _) = await Feed(
             ("Sandman: Leave me alone!", 0),
             ("Sandman: I just wanted a regular life!", 2000),
             ("Sandman: You care about them--", 4000),
-            ("Spider-Man: Of course I do.", 6000),
-            ("Rio: I'm heading downtown to", 8000),
+            ("Elena: Of course I do.", 6000),
+            ("Rio: I am heading downtown to", 8000),
             ("Rio: help coordinate supplies.", 8000 + ContinuationTranslator.WithinMs + 1));
         Assert.Equal([
-            "Sandman: Leave me alone!",
-            "Sandman: I just wanted a regular life!",
-            "Sandman: You care about them--",
-            "Spider-Man: Of course I do.",
-            "Rio: I'm heading downtown to",
-            "Rio: help coordinate supplies."], seen);
+            "Leave me alone!", "I just wanted a regular life!", "You care about them--", "Of course I do.",
+            "I am heading downtown to", "help coordinate supplies."], sent);
     }
 
     [Fact]
     public async Task InterruptedLineJoinsOnlyALowercaseContinuation()
     {
-        var seen = await Feed(("Sandman: You care about them--", 0), ("Sandman: but not me.", 2000));
-        Assert.Equal("Sandman: You care about them-- but not me.", seen[1]);
+        var (sent, _) = await Feed(("Sandman: You care about them--", 0), ("Sandman: but not me.", 2000));
+        Assert.Equal("You care about them-- but not me.", sent[1]);
     }
 
+    /// Üç noktayla biten sözden sonra gelen büyük harfli satır yeni cümledir; yarım okunmuş satır da birleşmez.
     [Fact]
-    public async Task ScreenTextAndInterruptedLinesAreNotJoined()
+    public async Task NewSentenceAfterAnEllipsisOrAPartialReadIsNotJoined()
     {
-        var seen = await Feed(
-            ("PRESS X TO CONTINUE", 0),
-            ("LEVEL 2", 2000),
-            ("Criminal: Stop, drop, and- wait--'", 4000),
-            ("Criminal: I'll never make it out of these webs!", 6000),
-            ("Spider-Man: Oh man -", 9000),
-            ("Spider-Man: you think he's mad at me?", 10000));
-        Assert.Equal("LEVEL 2", seen[1]);
-        Assert.Equal("Criminal: I'll never make it out of these webs!", seen[3]);
-        Assert.Equal("Spider-Man: Oh man - you think he's mad at me?", seen[5]);
+        var (sent, _) = await Feed(
+            ("ANNA: At least it held...", 0),
+            ("ANNA: Well, I would say we are out of the woods.", 3000),
+            ("ANNA: Got another", 9000),
+            ("ANNA: We sure gave them a fight!", 11000),
+            ("PRESS X TO CONTINUE", 20000),
+            ("LEVEL 2", 22000));
+        Assert.Equal("Well, I would say we are out of the woods.", sent[1]);
+        Assert.Equal("We sure gave them a fight!", sent[3]);
+        Assert.Equal("LEVEL 2", sent[5]);
     }
 
-    /// Aynı konuşmacının açık kalan sözü, devamı büyük harfle (özel adla) başlasa da birleşir; sarılmış satırlar da.
+    /// Söz bağlayıcı bir sözcükle ya da virgülle yarıda kaldıysa devamı büyük harfle (özel adla) başlasa da birleşir.
     [Fact]
-    public async Task SameSpeakerOpenSentenceJoinsEvenWithACapitalAndWrappedLines()
+    public async Task OpenSentenceJoinsACapitalizedContinuation()
     {
-        var seen = await Feed(
+        var (sent, _) = await Feed(
             ("Priestess: The carvings say the spear was hidden in\nthe caves beneath", 0),
-            ("Priestess: Kephallonia when the temple was built!", 3000),
-            ("Elena: I thought you were...", 9000),
-            ("Elena: Never mind what I thought.", 11000),
-            ("Elena: We leave at dawn.", 14000));
-        Assert.Equal("Priestess: The carvings say the spear was hidden in the caves beneath Kephallonia when the temple was built!", seen[1]);
-        Assert.Equal("Elena: I thought you were... Never mind what I thought.", seen[3]);
-        // Biten cümleden sonra gelen yeni cümle birleşmez.
-        Assert.Equal("Elena: We leave at dawn.", seen[4]);
+            ("Priestess: Kephallonia when the temple was built!", 3000));
+        Assert.Equal("The carvings say the spear was hidden in the caves beneath Kephallonia when the temple was built!", sent[1]);
     }
 
     [Fact]
     public async Task MisreadSpeakerNameIsNotPartOfTheSentence()
     {
-        var seen = await Feed(("Marta: Okay,", 0), ("arta: the gate is open now!", 1500));
-        Assert.Equal("Marta: Okay, the gate is open now!", seen[1]);
-    }
-
-    [Fact]
-    public void GarbledCopyOfTheLineEndCollapses()
-    {
-        Assert.Equal("Tomas: Northern Supply Depot Entrance?",
-            ContinuationTranslator.WithoutRepeatedLines("Tomas: Northern Supply Depot Entrance?\nrn Suply Depot Entrance?"));
-        Assert.Equal("Take the north road.\nThen the south road.",
-            ContinuationTranslator.WithoutRepeatedLines("Take the north road.\nThen the south road."));
+        var (sent, shown) = await Feed(("Marta: Okay,", 0), ("arta: the gate is open now!", 1500));
+        Assert.Equal("Okay, the gate is open now!", sent[1]);
+        Assert.Equal("Marta: tr:Okay, the gate is open now!", shown[1]);
     }
 
     [Fact]
     public async Task RereadOfTheSameLineIsNotJoinedWithItself()
     {
-        var seen = await Feed(
-            ("Flint Marko: I havent been okay", 0),
-            ("Flint Marko: I haven't been okay", 500),
-            ("Flint Marko: for a long time--", 2500));
-        Assert.Equal("Flint Marko: I haven't been okay", seen[1]);
-        Assert.Equal("Flint Marko: I havent been okay for a long time--", seen[2]);
+        var (sent, _) = await Feed(
+            ("Marko: I havent been okay", 0),
+            ("Marko: I haven't been okay", 500),
+            ("Marko: for a long time--", 2500));
+        Assert.Equal("I haven't been okay", sent[1]);
+        Assert.Equal("I havent been okay for a long time--", sent[2]);
     }
 
     [Fact]
@@ -141,5 +147,9 @@ public class ContinuationTranslatorTests
             ContinuationTranslator.WithoutRepeatedLines("Kraven: A fate yowwill not share.\nKraven: A fate you will not share."));
         Assert.Equal("Where are you going?\n- Home.", ContinuationTranslator.WithoutRepeatedLines("Where are you going?\n- Home."));
         Assert.Equal("One line.", ContinuationTranslator.WithoutRepeatedLines(" One line. "));
+        Assert.Equal("Tomas: Northern Supply Depot Entrance?",
+            ContinuationTranslator.WithoutRepeatedLines("Tomas: Northern Supply Depot Entrance?\nrn Suply Depot Entrance?"));
+        Assert.Equal("Take the north road.\nThen the south road.",
+            ContinuationTranslator.WithoutRepeatedLines("Take the north road.\nThen the south road."));
     }
 }

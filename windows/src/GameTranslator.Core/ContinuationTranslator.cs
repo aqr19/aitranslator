@@ -31,13 +31,50 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
     public async Task<string> TranslateAsync(string text, CancellationToken cancellationToken = default)
     {
         var source = WithoutRepeatedLines(text);
-        string request;
-        lock (gate) request = Combine(source);
-        return await inner.TranslateAsync(request, cancellationToken).ConfigureAwait(false);
+        // Birkaç kişi konuşuyorsa her konuşma kendi adıyla ayrı çevrilir (aynı anda); adlar çevrilmez.
+        if (Turns(source) is { Count: > 1 } turns)
+        {
+            lock (gate) previous = null;
+            var parts = await Task.WhenAll(turns.Select(turn => TranslateTurn(turn.Speaker, turn.Body, cancellationToken))).ConfigureAwait(false);
+            return string.Join('\n', parts);
+        }
+        string? speaker;
+        string body;
+        lock (gate) (speaker, body) = Combine(source);
+        return await TranslateTurn(speaker, body, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Sözü çevirir, konuşmacı adını olduğu gibi başına koyar. Ad çevirmene verilmez: çevirmen onu sıradan sözcük sanıp
+    /// çeviriyor ("ANNA:" → "ANNE:", "MILLER:" → "DEĞİRMENCİ:") ve aynı ad bir öyle bir böyle çıkıyordu.
+    /// </summary>
+    private async Task<string> TranslateTurn(string? speaker, string body, CancellationToken cancellationToken)
+    {
+        if (body.Length == 0) return speaker is null ? "" : speaker + ":";
+        var translated = (await inner.TranslateAsync(body, cancellationToken).ConfigureAwait(false)).Trim();
+        return speaker is null ? translated : $"{speaker}: {translated}";
+    }
+
+    /// <summary>
+    /// Okumayı konuşmalara böler: konuşmacı adıyla başlayan her satır yeni bir konuşmadır, adsız satırlar bir öncekinin
+    /// devamıdır (ekranda sarılmış). İkiden az konuşmacı varsa null.
+    /// </summary>
+    private static List<(string? Speaker, string Body)>? Turns(string source)
+    {
+        var rows = source.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (rows.Count(row => SpeakerLabel().IsMatch(row)) < 2) return null;
+        var turns = new List<(string? Speaker, string Body)>();
+        foreach (var row in rows)
+        {
+            var (speaker, body) = Split(row);
+            if (speaker is null && turns.Count > 0) turns[^1] = (turns[^1].Speaker, (turns[^1].Body + " " + body).Trim());
+            else turns.Add((speaker, body));
+        }
+        return turns;
     }
 
     /// <summary>Satır önceki parçanın devamıysa ikisi birlikte, değilse kendisi. Durumu günceller.</summary>
-    private string Combine(string source)
+    private (string? Speaker, string Body) Combine(string source)
     {
         var (speaker, body) = Split(source);
         var at = now();
@@ -62,24 +99,18 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
                 source = speaker is null ? body : $"{speaker}: {body}";
             }
         }
-        var request = source;
         var whole = body;
-        // Aynı konuşmacı adıyla gelen satır, önceki söz cümleyi bitirmediyse ya da üç noktayla asılı kaldıysa onun
-        // devamıdır; büyük harfle (özel adla) başlasa bile ("…in the caves beneath" → "Kephallonia when…").
-        var sameSpeaker = speaker is not null && previous is { Speaker: { } before } && before == speaker;
         if (previous is { } last && at - last.At <= WithinMs && !body.Contains('\n') && !last.Body.Contains('\n') &&
-            (speaker is null || speaker == last.Speaker) && (Continues(last.Body, body) || (sameSpeaker && LeftOpen(last.Body))) &&
+            (speaker is null || speaker == last.Speaker) && Continues(last.Body, body) &&
             !SameLine(last.Raw, source) && last.Body.Length + body.Length + 1 <= MaxLength)
         {
             whole = last.Body + " " + body;
-            var label = speaker ?? last.Speaker;
-            request = label is null ? whole : $"{label}: {whole}";
-            speaker = label;
+            speaker ??= last.Speaker;
         }
         // Aynı satırın yeniden okunması zinciri ilerletmez (yoksa satır kendisiyle birleşirdi).
         if (previous is not { } kept || !SameLine(kept.Raw, source))
             previous = (speaker, whole, source, at);
-        return request;
+        return (speaker, whole);
     }
 
     /// <summary>Önceki parça cümleyi bitirmediyse ya da yeni parça küçük harfle başlıyorsa devamdır.</summary>
@@ -95,25 +126,28 @@ public sealed partial class ContinuationTranslator(ITextTranslator inner, Func<l
         var trimmed = before.TrimEnd().TrimEnd('\'', '"', '’', '”', '`', ' ');
         // Küçük harfle başlayan satır her zaman bir öncekinin devamıdır ("...need help..." → "when they come for you.").
         if (char.IsLower(first)) return trimmed.Length > 0 && !".!?".Contains(trimmed[^1]) || trimmed.EndsWith("...", StringComparison.Ordinal) || trimmed.EndsWith('…');
-        // Büyük harfle başlayan satır yalnız önceki virgülle ya da noktalı virgülle bittiyse devamdır ("…in your old age," →
-        // "Sergei."). Noktalamasız biten satırdan sonra gelen büyük harfli satır çoğunlukla başka bir yazıdır
-        // ("PRESS X TO CONTINUE" → "LEVEL 2"), "--" ile kesilen sözden sonra gelen de başka bir cümledir.
-        return trimmed.EndsWith(',') || trimmed.EndsWith(';');
+        // Büyük harfle başlayan satır yalnız önceki söz açıkça yarıda kaldıysa devamdır: virgülle ya da bağlayıcı bir
+        // sözcükle bitiyorsa ("…in your old age," → "Sergei."; "…in the caves beneath" → "Kephallonia when…").
+        // Üç noktayla biten sözden sonra gelen büyük harfli satır yeni bir cümledir ("At least it held..." → "Well, …"),
+        // noktalamasız biten sıradan satırdan sonra gelen de ("Got another" yarım okumadır, "LEVEL 2" başka bir yazıdır).
+        if (trimmed.EndsWith(',') || trimmed.EndsWith(';')) return true;
+        var lastWord = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault()?.ToLowerInvariant();
+        return lastWord is not null && Connectors.Contains(lastWord);
     }
+
+    /// <summary>Cümlenin ortasında kalındığını gösteren son sözcükler (edat, bağlaç, tanımlık).</summary>
+    private static readonly HashSet<string> Connectors =
+    [
+        "a", "an", "the", "of", "to", "in", "on", "at", "by", "for", "from", "with", "without", "into", "onto", "over", "under",
+        "beneath", "between", "through", "about", "against", "and", "or", "but", "that", "which", "who", "whose", "than", "as",
+        "if", "because", "when", "while", "my", "your", "his", "her", "our", "their", "its", "this", "these", "those",
+    ];
 
     /// <summary>En az iki harfli bir sözcüğü olan ve rakamla başlamayan yazı.</summary>
     private static bool IsSpeech(string text)
     {
         var trimmed = text.TrimStart();
         return trimmed.Length > 0 && !char.IsDigit(trimmed[0]) && text.Count(char.IsLetter) >= 3;
-    }
-
-    /// <summary>Söz açık mı kaldı: cümle sonu işaretiyle bitmiyor ya da üç noktayla asılı ("I thought you were…").</summary>
-    private static bool LeftOpen(string before)
-    {
-        var trimmed = before.TrimEnd().TrimEnd('\'', '"', '’', '”', '`', ' ');
-        if (trimmed.Length == 0 || trimmed.EndsWith("--", StringComparison.Ordinal) || trimmed.EndsWith('—')) return false;
-        return trimmed.EndsWith("...", StringComparison.Ordinal) || trimmed.EndsWith('…') || !".!?".Contains(trimmed[^1]);
     }
 
     /// <summary>Okunan ad, bilinen adın birkaç harfi eksik ya da yanlış hâli mi ("anke", "Gankc" → "Ganke").</summary>

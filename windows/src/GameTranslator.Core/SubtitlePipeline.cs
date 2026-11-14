@@ -95,6 +95,8 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
     private int? lineOnScreen;
     /// <summary>Son çevrilen satırlar (kaynak → çeviri; zaten hedef dildeyse null). Geri gelen satır bunlardan yeniden gösterilir.</summary>
     private readonly List<(int Number, string Source, string? Translation)> pairs = [];
+    /// <summary>Son çevrilen satırların ne zaman çevrildiği (adsız yinelemeleri tanımak için).</summary>
+    private readonly Dictionary<string, long> shownAt = [];
     /// <summary>Okuma durdurulunca artar; önceki oturumdan dönen çeviriler gösterilmez.</summary>
     private int session;
     /// <summary>Son okunan satırlar; kare değişmediyse yeniden okunmaz, bunlar kullanılır.</summary>
@@ -369,6 +371,15 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
         {
             lastSent = last with { At = now() };
             Write($"yeniden-okuma: {SubtitleLog.Excerpt(source)} az önce çevrilenden iyi değil, yok sayıldı");
+            return null;
+        }
+        // Konuşmacı adı kareden kareye görünüp kayboluyorsa araya başka okumalar girebilir; az önce adıyla çevrilmiş
+        // satırın adsız hâli yine aynı satırdır ("ANNA: Come up now!" … "Come up now!").
+        var bare = TextMatch.Normalize(source);
+        if (bare.Length > 0 && shownAt.Any(entry => now() - entry.Value < RereadWithinMs &&
+                WithoutSpeaker(entry.Key) is { } spoken && TextMatch.Normalize(spoken) == bare))
+        {
+            Write($"yeniden-okuma: {SubtitleLog.Excerpt(source)} az önce konuşmacı adıyla çevrildi, yok sayıldı");
             return null;
         }
         var wait = WaitFor(source);
@@ -795,6 +806,8 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
 
     private void Remember(int number, string source, string? translation)
     {
+        shownAt[source] = now();
+        foreach (var old in shownAt.Where(entry => now() - entry.Value > RereadWithinMs * 3).Select(entry => entry.Key).ToList()) shownAt.Remove(old);
         pairs.RemoveAll(pair => pair.Source == source);
         pairs.Add((number, source, translation));
         if (pairs.Count > RememberedPairs) pairs.RemoveAt(0);

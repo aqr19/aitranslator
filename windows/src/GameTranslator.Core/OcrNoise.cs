@@ -76,13 +76,14 @@ public static partial class OcrNoise
     /// </summary>
     private static string FixSpeaker(string line)
     {
-        line = SpeakerIcon().Replace(line, "${name}:");
+        line = WithoutLeadingJunk(SpeakerIcon().Replace(line, "${name}:"));
         if (SpeakerLabel().Match(line) is { Success: true } label)
         {
             var read = label.Groups["name"].Value;
             // Henüz tanınmayan ad, tanınan bir adın tek harf farklı okumasıysa ("Spider-Mam:") o addır.
             if (!(Speakers.TryGetValue(read, out var times) && times >= 2) &&
-                Speakers.Where(pair => pair.Value >= 2).Select(pair => pair.Key).FirstOrDefault(known => Misread(read, known, 1)) is { } real)
+                Speakers.Where(pair => pair.Value >= 2).Select(pair => pair.Key)
+                    .FirstOrDefault(known => Misread(read, known, 1) || GluedLetter(read, known)) is { } real)
                 return real + line[read.Length..];
             if (Speakers.Count < MaxSpeakers || Speakers.ContainsKey(read))
                 Speakers.AddOrUpdate(read, 1, (_, seen) => seen + 1);
@@ -113,6 +114,26 @@ public static partial class OcrNoise
     /// ("Rio", "Marko"; "Father" ile "Mother" arasında yalnız iki harf var).
     /// </summary>
     private const int MinFuzzyName = 7;
+
+    /// <summary>
+    /// Tanınan konuşmacı adının önüne okunmuş çöp atılır: "'ANNA: …", "--—ANNA: …", "j ANNA: …". Ad satırın ilk
+    /// dört karakteri içinde başlamalı ve öncesinde iki harfli bir sözcük bulunmamalıdır.
+    /// </summary>
+    private static string WithoutLeadingJunk(string line)
+    {
+        foreach (var name in Speakers.Where(pair => pair.Value >= 2).Select(pair => pair.Key).OrderByDescending(key => key.Length))
+        {
+            var at = line.IndexOf(name + ":", StringComparison.Ordinal);
+            if (at is < 1 or > 4) continue;
+            var before = line[..at];
+            if (before.Count(char.IsLetter) <= 1 && !char.IsLetterOrDigit(before[^1])) return line[at..];
+        }
+        return line;
+    }
+
+    /// <summary>Tanınan adın başına tek harf yapışmış mı ("IANNA", "JANNA" → "ANNA"); kısa adlarda da güvenlidir.</summary>
+    private static bool GluedLetter(string read, string known) =>
+        known.Length >= 4 && read.Length == known.Length + 1 && read.EndsWith(known, StringComparison.Ordinal);
 
     /// <summary><paramref name="read"/>, <paramref name="name"/> adının en çok <paramref name="limit"/> harf farklı okuması mı (çoğul eki sayılmaz).</summary>
     private static bool Misread(string read, string name, int limit) =>
@@ -166,8 +187,16 @@ public static partial class OcrNoise
     /// Cümle sonuna yapışan çöp: yazı tanıma sondaki noktadan sonra bir iki harf uyduruyor ("Focus.ie", "now.l.") ve
     /// üç noktayı alt tırnakla okuyor ("me„.", "kidding.„"). Kısaltmalar ("p.m", "e.g") korunur: noktadan önce en az üç harf aranır.
     /// </summary>
-    private static string FixLineEnd(string line) =>
-        TrailingJunk().Replace(LowQuoteDots().Replace(line, "..."), "");
+    private static string FixLineEnd(string line)
+    {
+        var text = TrailingJunk().Replace(LowQuoteDots().Replace(line, "..."), "");
+        // Cümle bittikten sonra okunan kısa artıklar ("…right?! i 'o/", "…too! t)", "…okay? 'NV") atılır.
+        return StrayTail().Replace(text, "");
+    }
+
+    /// <summary>Cümle sonu işaretinden sonra gelen, en çok üç karakterlik, harf dışı işaret içeren ya da tek harflik parça.</summary>
+    [GeneratedRegex(@"(?<=[.!?…])(?:\s+(?:(?=\S{0,2}[^\p{L}\d\s.!?…])\S{1,3}|\p{L}))+$")]
+    private static partial Regex StrayTail();
 
     [GeneratedRegex(@"(?<=\p{L}{3}[.!?…])\p{Ll}{1,2}[.?]?$")]
     private static partial Regex TrailingJunk();
