@@ -221,6 +221,9 @@ public sealed class SubtitlePipeline(ITextReader reader, ITextTranslator transla
         // Alandaki menü ve köşe göstergeleri de altyazı değildir; yalnız altyazı bloğu çevrilir ve kutusu ona göre olur.
         var area = new TextBox(region.Left, region.Top, region.Right, region.Bottom);
         var cleaned = raw.WithoutButtonPrompts().WithoutOcrNoise();
+        // Karışan harfler ("nol" → "not", "Io" → "to") sözcük denetimi varsa onarılır.
+        if (ExtraWordCheck is { } wordCheck)
+            cleaned = new Reading(cleaned.Lines.Select(line => line with { Text = OcrConfusions.Repair(line.Text, wordCheck) }));
         // Uygulama altyazı satırlarını kendisi seçebilir (otomatik algılama): okunan alan geniştir, satırlar süzülür.
         if (LineFilter is { } filter) cleaned = filter(cleaned, area);
         var reading = cleaned.SubtitleBlock(area);
