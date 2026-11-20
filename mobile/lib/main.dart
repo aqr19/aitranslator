@@ -111,7 +111,7 @@ class GameTranslatorApp extends StatelessWidget {
       scrollBehavior: const _AppleScroll(),
       theme: ThemeData(
         colorScheme: scheme,
-        fontFamily: 'Inter',
+        fontFamily: 'IBMPlexSansArabic',
         scaffoldBackgroundColor: Tokens.background,
         splashFactory: NoSplash.splashFactory,
         highlightColor: const Color(0x1FFFFFFF),
@@ -123,7 +123,7 @@ class GameTranslatorApp extends StatelessWidget {
           elevation: 0,
           scrolledUnderElevation: 0,
           centerTitle: true,
-          titleTextStyle: TextStyle(fontFamily: 'Inter', fontSize: 17, fontWeight: FontWeight.w600, letterSpacing: -0.3, color: Tokens.textPrimary),
+          titleTextStyle: TextStyle(fontFamily: 'IBMPlexSansArabic', fontSize: 17, fontWeight: FontWeight.w600, letterSpacing: -0.3, color: Tokens.textPrimary),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
@@ -131,7 +131,7 @@ class GameTranslatorApp extends StatelessWidget {
             shape: capsule,
             backgroundColor: Tokens.accent,
             foregroundColor: Colors.white,
-            textStyle: Txt.headline.copyWith(fontFamily: 'Inter'),
+            textStyle: Txt.headline.copyWith(fontFamily: 'IBMPlexSansArabic'),
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
@@ -139,13 +139,13 @@ class GameTranslatorApp extends StatelessWidget {
             minimumSize: const Size(0, 50),
             backgroundColor: Tokens.surface,
             shape: capsule,
-            textStyle: Txt.headline.copyWith(fontFamily: 'Inter'),
+            textStyle: Txt.headline.copyWith(fontFamily: 'IBMPlexSansArabic'),
             foregroundColor: Tokens.textPrimary,
             side: const BorderSide(color: Tokens.border),
           ),
         ),
         textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(foregroundColor: Tokens.accent, textStyle: Txt.body.copyWith(fontFamily: 'Inter')),
+          style: TextButton.styleFrom(foregroundColor: Tokens.accent, textStyle: Txt.body.copyWith(fontFamily: 'IBMPlexSansArabic')),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
@@ -173,11 +173,15 @@ class GameTranslatorApp extends StatelessWidget {
         snackBarTheme: SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
           backgroundColor: Tokens.sheet,
-          contentTextStyle: Txt.subhead.copyWith(fontFamily: 'Inter', color: Tokens.textPrimary),
+          contentTextStyle: Txt.subhead.copyWith(fontFamily: 'IBMPlexSansArabic', color: Tokens.textPrimary),
           shape: const StadiumBorder(side: BorderSide(color: Tokens.border)),
         ),
         dividerTheme: const DividerThemeData(color: Tokens.separator, thickness: 0.6, space: 0.6),
         progressIndicatorTheme: const ProgressIndicatorThemeData(color: Tokens.accent),
+      ),
+      builder: (context, child) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: child ?? const SizedBox.shrink(),
       ),
       home: const RootPage(),
     );

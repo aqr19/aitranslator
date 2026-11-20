@@ -1,3 +1,27 @@
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  src: url("fonts/IBMPlexSansArabic-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  src: url("fonts/IBMPlexSansArabic-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  src: url("fonts/IBMPlexSansArabic-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: "IBM Plex Sans Arabic";
+  src: url("fonts/IBMPlexSansArabic-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
 /* SPDX-License-Identifier: AGPL-3.0-only */
 :root {
   --bg-obsidian: #0B0A10;
@@ -19,7 +43,7 @@ html, body {
   overflow: hidden;
   background: transparent;
   color: var(--text-primary);
-  font-family: "Cairo", "IBM Plex Sans Arabic", "LG Smart UI", Arial, sans-serif;
+  font-family: "IBM Plex Sans Arabic", "Cairo", "LG Smart UI", Arial, sans-serif;
   direction: rtl;
 }
 

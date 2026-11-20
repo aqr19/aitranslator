@@ -1,9 +1,36 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// TV uygulamasının metinleri. Dil TV'nin diline göre seçilir; Türkçe değilse İngilizce.
 (function () {
   'use strict';
 
   var TEXTS = {
+    ar: {
+      waiting: 'افتح تطبيق GameTranslator على جهازك.',
+      waitingHint: 'سيعثر التطبيق على هذا التلفاز ويرسل الترجمة إلى هنا.',
+      panelTitle: 'GameTranslator',
+      hdmi: 'HDMI',
+      lastSubtitle: 'آخر ترجمة',
+      diagnostics: 'التشخيص',
+      server: 'التطبيق',
+      connection: 'الاتصال',
+      loading: '(جارٍ التحميل)',
+      videoReady: '(تم استلام الصورة)',
+      playing: '(قيد التشغيل)',
+      inputError: '(خطأ: تعذر فتح المدخل)',
+      sourceError: '(خطأ: المصدر غير مدعوم)',
+      auto: 'تلقائي',
+      consoleNotFound: 'لم يتم العثور على الجهاز',
+      noEventSource: 'هذا التلفاز غير مدعوم (EventSource غير متوفر)',
+      connecting: 'جارٍ الاتصال…',
+      connected: 'متصل',
+      reconnecting: 'انقطع الاتصال، جارٍ إعادة المحاولة…',
+      none: '—',
+      keys: 'موافق: هذه اللوحة · ◀▶: مدخل HDMI (عند فتح اللوحة) · 1–4: مدخل HDMI · 0: بحث تلقائي عن الجهاز · ▲▼: تحريك الترجمة للأعلى/للأسفل · أحمر: ترجمة تجريبية · أزرق: عرض توضيحي · أخضر: هذه اللوحة',
+      localTest: 'اختبار: هل يظهر هذا النص فوق اللعبة؟',
+      positionPreview: 'ستظهر الترجمة هنا',
+      demoButton: 'مشاهدة العرض التجريبي',
+      demoBadge: 'تجريبي',
+      demoHint: 'مثال: تظهر ترجمة اللعبة هنا باللغة العربية. اضغط رجوع للخروج.'
+    },
     tr: {
       waiting: 'Bilgisayarınızda GameTranslator uygulamasını açın.',
       waitingHint: 'Uygulama bu TV\'yi bulup altyazıları buraya gönderecek.',
@@ -58,17 +85,22 @@
       positionPreview: 'Subtitles will appear here',
       demoButton: 'Watch the demo',
       demoBadge: 'DEMO',
-      demoHint: 'Example: the game\'s English subtitles appear here in Turkish. Press Back to exit.'
+      demoHint: 'Example: the game\'s English subtitles appear here. Press Back to exit.'
     }
   };
 
-  var lang = (navigator.language || 'en').toLowerCase().indexOf('tr') === 0 ? 'tr' : 'en';
+  var navLang = (navigator.language || 'en').toLowerCase();
+  var lang = navLang.indexOf('ar') === 0 ? 'ar' : (navLang.indexOf('tr') === 0 ? 'tr' : 'en');
+
+  if (document && document.documentElement) {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  }
 
   window.t = function (key) {
     return (TEXTS[lang] && TEXTS[lang][key]) || TEXTS.en[key] || key;
   };
 
-  // data-i18n niteliği taşıyan öğelerin metnini doldurur.
   window.applyI18n = function () {
     var nodes = document.querySelectorAll('[data-i18n]');
     for (var i = 0; i < nodes.length; i++) {
