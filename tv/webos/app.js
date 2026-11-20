@@ -884,3 +884,21 @@
   // Bekleme ekranı açıksa panel kendiliğinden açılmaz; yeşil tuşla açılabilir.
   if (server) showPanel(true); else hidePanel();
 })();
+
+function renderSpeakerText(containerEl, rawText) {
+  containerEl.textContent = '';
+  const lines = String(rawText || '').split('\n');
+  lines.forEach((line, idx) => {
+    if (idx > 0) containerEl.appendChild(document.createElement('br'));
+    const colonIndex = line.indexOf(':');
+    if (colonIndex > 0 && colonIndex < 30) {
+      const speakerSpan = document.createElement('span');
+      speakerSpan.className = 'speaker-name';
+      speakerSpan.textContent = line.slice(0, colonIndex + 1);
+      containerEl.appendChild(speakerSpan);
+      containerEl.appendChild(document.createTextNode(line.slice(colonIndex + 1)));
+    } else {
+      containerEl.appendChild(document.createTextNode(line));
+    }
+  });
+}

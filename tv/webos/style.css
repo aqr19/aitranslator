@@ -1,13 +1,26 @@
 /* SPDX-License-Identifier: AGPL-3.0-only */
+:root {
+  --bg-obsidian: #0B0A10;
+  --surface-card: #14121E;
+  --surface-pill: #242132;
+  --overlay-mask: rgba(11, 10, 18, 0.88);
+  --grad-neon: linear-gradient(90deg, #FF2E93 0%, #9D4EDD 50%, #00E5FF 100%);
+  --speaker-pink: #FF4D8D;
+  --text-primary: #FFFFFF;
+  --text-secondary: #9B97AD;
+  --border-subtle: rgba(255, 255, 255, 0.12);
+  --live-badge: #F43F5E;
+}
+
 html, body {
   margin: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
-  /* webOS HDMI görüntüyü sayfanın altındaki ayrı bir katmanda çizer; sayfa şeffaf kalmalı. */
   background: transparent;
-  color: #fff;
-  font-family: "LG Smart UI", "Museo Sans", Arial, sans-serif;
+  color: var(--text-primary);
+  font-family: "Cairo", "IBM Plex Sans Arabic", "LG Smart UI", Arial, sans-serif;
+  direction: rtl;
 }
 
 #video-host, #video-host video {
@@ -20,28 +33,26 @@ html, body {
 
 #subtitle {
   position: absolute;
-  left: 8%;
-  right: 8%;
+  left: 10%;
+  right: 10%;
   bottom: 7%;
   text-align: center;
   z-index: 10;
-  /* Yazı kendi katmanında kalır, opaklık geçişi yoktur: geçiş bitince HDMI katmanının altında kalma ihtimali kapanır. */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
 }
 
 #subtitle.hidden { visibility: hidden; }
 
-/* "Üstünü örtsün" yerleşiminde oyundaki İngilizce altyazıyı kapatan zemin. */
 #subtitle-cover {
   position: absolute;
   z-index: 9;
-  border-radius: 10px;
-  background: rgb(10, 10, 12);
+  border-radius: 8px;
+  background: var(--overlay-mask);
+  border-top: 2px solid #FF2E93;
 }
 #subtitle-cover.hidden { display: none; }
 
-/* "Ekranı çevir": her çeviri kendi İngilizce yazısının üstünde, onu örterek ve aynı boyda; altyazının altında kalır. */
 #screen {
   position: absolute;
   top: 0;
@@ -54,77 +65,89 @@ html, body {
 #screen .item {
   position: absolute;
   box-sizing: border-box;
-  padding: 2px 6px;
+  padding: 4px 10px;
   border-radius: 6px;
-  /* Altındaki İngilizce yazı seçilmesin diye altyazı örtüsü kadar koyu. */
-  background: rgba(0, 0, 0, 0.97);
-  color: #fff;
+  background: rgba(11, 10, 18, 0.94);
+  border-top: 2px solid #FF2E93;
+  color: var(--text-primary);
   font-weight: 600;
-  line-height: 1.15;
+  line-height: 1.2;
   text-align: center;
-  text-shadow: 0 1px 2px #000;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
   word-wrap: break-word;
   overflow: hidden;
 }
-#screen .item.paragraphs { text-align: left; white-space: pre-line; }
+#screen .item.paragraphs { text-align: right; white-space: pre-line; }
 
-/* Hızlı konuşmada önceki satır kısa süre yeni satırın üstünde, daha soluk durur. */
-#subtitle-prev { margin-bottom: 10px; opacity: 0.7; }
+#subtitle-prev { margin-bottom: 10px; opacity: 0.72; }
 #subtitle-prev.hidden { display: none; }
 
 #subtitle-prev-text {
   display: inline-block;
-  padding: 6px 20px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.6);
-  font-size: 37px;
+  padding: 6px 22px;
+  border-radius: 2px 2px 8px 8px;
+  background: rgba(11, 10, 18, 0.75);
+  border-top: 2px solid rgba(255, 46, 147, 0.65);
+  font-size: 36px;
   line-height: 1.3;
   font-weight: 600;
-  text-shadow: 0 2px 4px #000;
+  color: var(--text-secondary);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
 #subtitle-text {
+  position: relative;
   display: inline-block;
-  /* Birden çok konuşmacı ("Jackie: … / V: …") ayrı satırlarda görünür; bilgisayar konuşmaları satır sonuyla ayırır. */
+  max-width: 80vw;
   white-space: pre-line;
-  padding: 10px 26px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.72);
+  padding: 12px 28px;
+  border-radius: 2px 2px 8px 8px;
+  background: var(--overlay-mask);
+  border: 1px solid var(--border-subtle);
+  border-top: 3px solid #FF2E93;
+  box-shadow: 0 -2px 12px rgba(0, 229, 255, 0.16), 0 8px 24px rgba(0, 0, 0, 0.55);
   font-size: 46px;
-  line-height: 1.3;
+  line-height: 1.35;
   font-weight: 600;
-  text-shadow: 0 2px 4px #000;
+  color: var(--text-primary);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
 }
 
+.speaker-name {
+  color: var(--speaker-pink);
+  font-weight: 700;
+}
 
-/* Panel ve bekleme ekranı: design/tokens.json'un koyu tema renkleri (docs/TASARIM.md). */
 #panel {
   position: absolute;
   top: 48px;
-  left: 48px;
+  right: 48px;
   z-index: 20;
   min-width: 640px;
   max-width: 1100px;
   padding: 28px 36px;
-  border-radius: 24px;
-  border: 2px solid #30333A;
-  background: rgba(20, 21, 24, 0.92);
-  color: #F3EEE4;
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  border-top: 3px solid #FF2E93;
+  background: rgba(20, 18, 30, 0.94);
+  color: var(--text-primary);
   font-size: 26px;
   line-height: 1.5;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
 #panel.hidden { display: none; }
-#panel .title { display: flex; align-items: center; font-size: 32px; font-weight: 600; margin-bottom: 18px; }
-#panel .title .logo { width: 48px; height: 48px; border-radius: 11px; margin-right: 16px; }
+#panel .title { display: flex; align-items: center; font-size: 32px; font-weight: 700; margin-bottom: 18px; }
+#panel .title .logo { width: 48px; height: 48px; border-radius: 12px; margin-left: 16px; }
 #panel .row { display: flex; padding: 6px 0; }
-#panel .label { width: 200px; color: #A9A59C; }
-#panel .keys { margin-top: 18px; padding-top: 16px; border-top: 2px solid #30333A; font-size: 22px; color: #A9A59C; }
+#panel .label { width: 220px; color: var(--text-secondary); }
+#panel .keys { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-subtle); font-size: 22px; color: var(--text-secondary); }
 #panel .keys .key { padding: 3px 0; }
-#panel .keys .key b { display: inline-block; min-width: 150px; color: #F5B83D; font-weight: 600; }
-.muted { color: #A9A59C; }
+#panel .keys .key b { display: inline-block; min-width: 150px; color: #00E5FF; font-weight: 600; }
+
+.muted { color: var(--text-secondary); }
 .ok { color: #62C990; }
-.bad { color: #F28B82; }
+.bad { color: var(--live-badge); }
 
 #waiting {
   position: absolute;
@@ -135,46 +158,55 @@ html, body {
   z-index: 15;
   max-width: 1100px;
   padding: 56px 72px;
-  border-radius: 32px;
-  border: 2px solid #30333A;
-  background: rgba(20, 21, 24, 0.94);
-  color: #F3EEE4;
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  border-top: 3px solid #FF2E93;
+  background: rgba(20, 18, 30, 0.96);
+  color: var(--text-primary);
   text-align: center;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
 }
 
 #waiting.hidden { display: none; }
-#waiting .logo { width: 112px; height: 112px; border-radius: 26px; margin-bottom: 28px; }
-#waiting .waiting-title { font-size: 42px; font-weight: 600; line-height: 1.3; }
-#waiting .waiting-hint { margin-top: 16px; font-size: 28px; line-height: 1.4; color: #A9A59C; }
+#waiting .logo { width: 112px; height: 112px; border-radius: 20px; margin-bottom: 28px; }
+#waiting .waiting-title { font-size: 42px; font-weight: 700; line-height: 1.3; }
+#waiting .waiting-hint { margin-top: 16px; font-size: 28px; line-height: 1.4; color: var(--text-secondary); }
 
-/* Bekleme ekranındaki düğme; kumandayla seçili olduğu belli olsun diye sarı dolgu ve çerçeve. */
 #waiting .button {
   display: inline-block;
   margin-top: 36px;
   padding: 16px 44px;
-  border-radius: 14px;
-  border: 3px solid #30333A;
-  background: #1C1E22;
-  color: #F3EEE4;
+  border-radius: 999px;
+  border: 2px solid var(--border-subtle);
+  background: var(--surface-pill);
+  color: var(--text-primary);
   font-size: 30px;
   font-weight: 600;
+  transition: transform 0.15s ease;
 }
-#waiting .button.focused { background: #F5B83D; border-color: #FFFFFF; color: #1A1A1A; }
 
-/* Demo sırasında sağ üstte ne gösterildiğini anlatan not. */
+#waiting .button.focused {
+  background: var(--surface-card);
+  border-color: #00E5FF;
+  box-shadow: 0 0 0 2px #FF2E93, 0 0 20px rgba(0, 229, 255, 0.35);
+  color: var(--text-primary);
+  transform: scale(1.03);
+}
+
 #demo-badge {
   position: absolute;
   top: 48px;
-  right: 48px;
+  left: 48px;
   z-index: 20;
   max-width: 760px;
   padding: 18px 26px;
-  border-radius: 18px;
-  border: 2px solid #30333A;
-  background: rgba(20, 21, 24, 0.92);
-  color: #A9A59C;
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  border-top: 3px solid #00E5FF;
+  background: rgba(20, 18, 30, 0.94);
+  color: var(--text-secondary);
   font-size: 24px;
   line-height: 1.4;
 }
 #demo-badge.hidden { display: none; }
-#demo-badge b { display: block; color: #F5B83D; font-size: 26px; margin-bottom: 4px; }
+#demo-badge b { display: block; color: var(--speaker-pink); font-size: 26px; margin-bottom: 4px; }

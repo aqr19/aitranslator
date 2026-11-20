@@ -1,13 +1,9 @@
 <!doctype html>
-<html>
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <!-- Ekran her TV'de 1920 piksel genişliğinde düzenlenir. Android TV'nin WebView'i bunu vermezse 1080p ekranı 960 piksel
-       sayıyor ve yazılar iki kat büyük çıkıyordu (TCL C6K, #7). LG ve Samsung zaten 1920 kullanır. initial-scale
-       verilmez: Android'de 1 ölçeği sayfanın yalnız sol üst çeyreğini gösterip altyazıyı ekran dışında bırakıyordu;
-       sığdırma ölçeğini MainActivity hesaplar. -->
   <meta name="viewport" content="width=1920">
-  <title>GameTranslator</title>
+  <title>Subtitle Studio — GameTranslator</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -27,7 +23,7 @@
   <div id="demo-badge" class="hidden"><b data-i18n="demoBadge"></b><span data-i18n="demoHint"></span></div>
 
   <div id="panel">
-    <div class="title"><img class="logo" src="icon.png" alt=""><span data-i18n="panelTitle"></span> <span id="app-version" class="muted" style="margin-left: 12px; font-weight: 400;"></span></div>
+    <div class="title"><img class="logo" src="icon.png" alt=""><span data-i18n="panelTitle"></span> <span id="app-version" class="muted" style="margin-right: 12px; font-weight: 400;"></span></div>
     <div class="row"><span class="label" data-i18n="hdmi"></span><span><span id="st-hdmi">-</span> <span id="st-video" class="muted"></span></span></div>
     <div class="row"><span class="label" data-i18n="server"></span><span id="st-server">-</span></div>
     <div class="row"><span class="label" data-i18n="connection"></span><span id="st-conn">-</span></div>
