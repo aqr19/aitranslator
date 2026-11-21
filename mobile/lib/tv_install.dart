@@ -75,8 +75,8 @@ class TvBridge {
   static Stream<String> get stages => _events.receiveBroadcastStream().map((event) => ((event as Map)['stage'] as String?) ?? '');
 
   /// Bundled TV package versions (brand -> version).
-  static Future> bundled() async {
-    final map = await _channel.invokeMethod>('bundled') ?? {};
+  static Future<Map<TvKind, String>> bundled() async {
+    final map = await _channel.invokeMethod<Map<Object?, Object?>>('bundled') ?? {};
     final result = <TvKind, String>{};
     for (final entry in map.entries) {
       final kind = tvKindOf(entry.key as String?);
@@ -88,7 +88,7 @@ class TvBridge {
   static Future<String?> phoneAddress() => _channel.invokeMethod<String>('phoneAddress');
 
   static Future<SavedTv?> saved() async {
-    final map = await _channel.invokeMethod>('saved');
+    final map = await _channel.invokeMethod<Map<Object?, Object?>>('saved');
     final kind = tvKindOf(map?['brand'] as String?);
     if (map == null || kind == null) return null;
     return SavedTv(kind, map['host'] as String? ?? '', map['name'] as String? ?? '', map['version'] as String?);
@@ -102,18 +102,18 @@ class TvBridge {
   static Future<List<FoundTv>> find(TvKind kind) async {
     final list = await _channel.invokeMethod<List<Object?>>('find', kind.id) ?? [];
     return [
-      for (final item in list.cast>())
+      for (final item in list.cast<Map<Object?, Object?>>())
         FoundTv(kind, item['host'] as String, item['name'] as String? ?? kind.title, item['ready'] as bool? ?? false),
     ];
   }
 
   static Future<TvCheck> check(TvKind kind, String host) async {
-    final map = await _channel.invokeMethod>('check', {'brand': kind.id, 'host': host}) ?? {};
+    final map = await _channel.invokeMethod<Map<Object?, Object?>>('check', {'brand': kind.id, 'host': host}) ?? {};
     return TvCheck(map['ready'] as bool? ?? false, map['keyServer'] as bool? ?? false, map['hasKey'] as bool? ?? false);
   }
 
   static Future<TvInstallResult> install(TvKind kind, String host, {String name = '', String? passphrase, bool force = false}) async {
-    final map = await _channel.invokeMethod>(
+    final map = await _channel.invokeMethod<Map<Object?, Object?>>(
           'install',
           {'brand': kind.id, 'host': host, 'name': name, 'passphrase': passphrase, 'force': force},
         ) ??
