@@ -8,18 +8,17 @@ android {
         applicationId 'com.gametranslator.tv'
         minSdk 24
         targetSdk 35
-        versionCode 100
+        versionCode (System.getenv('TV_VERSION_CODE') ?: '100').toInteger()
         versionName '1.0.0'
     }
-    // Sürümde imza depo sırrından gelir; yoksa geliştirme anahtarıyla imzalanır.
     signingConfigs {
         release {
             def store = System.getenv('ANDROID_KEYSTORE_FILE')
             if (store) {
                 storeFile file(store)
                 storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
-                keyAlias 'gametranslator'
-                keyPassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_KEY_ALIAS') ?: 'gametranslator'
+                keyPassword System.getenv('ANDROID_KEY_PASSWORD') ?: System.getenv('ANDROID_KEYSTORE_PASSWORD')
             }
         }
     }
@@ -36,7 +35,6 @@ android {
     sourceSets.main.assets.srcDirs += layout.buildDirectory.dir('generated/tv-assets')
 }
 
-// Arayüz LG ve Samsung'la ortaktır.
 tasks.register('copyTvAssets', Copy) {
     into layout.buildDirectory.dir('generated/tv-assets')
     from('../../webos') {

@@ -1,10 +1,8 @@
 name: Build & Release Android TV & Mobile
-
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
-
 permissions:
   contents: write
 
@@ -47,6 +45,19 @@ jobs:
           gradle-version: '8.9'
           validate-wrappers: false
 
+      - name: Decode signing keystore & set versionCode
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | tr -d '[:space:]' | base64 -d > /tmp/release-keystore.jks
+            echo "ANDROID_KEYSTORE_FILE=/tmp/release-keystore.jks" >> $GITHUB_ENV
+            echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+            echo "ANDROID_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> $GITHUB_ENV
+            echo "ANDROID_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> $GITHUB_ENV
+          fi
+          echo "TV_VERSION_CODE=$((100 + ${{ github.run_number }}))" >> $GITHUB_ENV
+
       - name: Build Android TV APK
         working-directory: tv/android
         run: gradle assembleRelease
@@ -72,6 +83,10 @@ jobs:
           cp "$TV_APK" dist-apks/gametranslator-tv.apk
           cp "$MOBILE_APK" dist-apks/gametranslator-mobile.apk
           ls -lh dist-apks/
+
+      - name: Clean up signing keystore
+        if: always()
+        run: rm -f /tmp/release-keystore.jks
 
       - name: Publish APKs to GitHub Release
         uses: softprops/action-gh-release@v2
