@@ -39,7 +39,14 @@ android {
 // Arayüz LG ve Samsung'la ortaktır.
 tasks.register('copyTvAssets', Copy) {
     into layout.buildDirectory.dir('generated/tv-assets/tv')
-    from('../../webos') { include 'app.js', 'i18n.js', 'config.js', 'index.html', 'style.css', 'icon.png', 'largeIcon.png' }
+    from('../../webos') {
+        include 'app.js', 'i18n.js', 'config.js', 'index.html', 'style.css', 'icon.png', 'largeIcon.png'
+        into('tv')
+    }
+    from('../../webos/fonts') {
+        include '*.ttf'
+        into('tv/fonts')
+    }
     from('..') { include 'platform.js' }
 }
 preBuild.dependsOn 'copyTvAssets'
