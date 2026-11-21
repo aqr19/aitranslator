@@ -556,7 +556,7 @@ class _TvInstallPageState extends State<TvInstallPage> {
               iconColor: tv.ready ? Tokens.success : Tokens.gray,
               title: tv.name,
               subtitle: tv.host,
-              trailing: tv.ready ? const Pill(text: 'Hazır', color: Tokens.success) : null,
+              trailing: tv.ready ? const Pill(text: 'مستعد', color: Tokens.success) : null,
               chevron: true,
               onTap: () => selectTv(tv.host, tv.name),
             ),
@@ -830,7 +830,7 @@ class _TvInstallPageState extends State<TvInstallPage> {
       Notice(
         icon: CupertinoIcons.tv_fill,
         color: r.launched ? Tokens.success : Tokens.accent,
-        title: r.launched ? 'TV\'de GameTranslator açıldı' : 'TV\'de GameTranslator\'ı aç',
+        title: r.launched ? 'TV\'de GameTranslator açıldı' : 'افتح GameTranslator\'على التلفاز\'',
         text: r.launched
             ? 'Çeviriyi telefonda başlattığında TV uygulaması telefonu ağda kendisi bulur.'
             : 'TV\'nin uygulamalar listesinde GameTranslator\'ı bul ve aç. Çeviriyi başlattığında telefonu kendisi bulur.',

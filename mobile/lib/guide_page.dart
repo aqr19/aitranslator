@@ -25,11 +25,11 @@ class GuideTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LargeTitleList(
-      title: 'Rehber',
+      title: 'دليل',
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
-          child: Text('Kurulumdan sorun gidermeye kadar her şey, adım adım.', style: Txt.body.copyWith(color: Tokens.textSecondary)),
+          child: Text('كل شيء بدءًا من التثبيت وحتى استكشاف الأخطاء وإصلاحها، خطوة بخطوة.', style: Txt.body.copyWith(color: Tokens.textSecondary)),
         ),
         const GuideList(),
       ],
@@ -55,11 +55,11 @@ class GuideList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const GroupHeader('BAŞLANGIÇ'),
+        const GroupHeader('بداية'),
         Group(inset: 60, children: [for (var i = 0; i < 5; i++) cell(i)]),
-        const GroupHeader('KULLANIM'),
+        const GroupHeader('يستخدم'),
         Group(inset: 60, children: [for (var i = 5; i < 8; i++) cell(i)]),
-        const GroupHeader('YARDIM'),
+        const GroupHeader('يساعد'),
         Group(inset: 60, children: [cell(8)]),
       ],
     );
@@ -93,7 +93,7 @@ class _GuideChapterPageState extends State<GuideChapterPage> {
     final chapter = chapters[widget.index];
     final next = widget.index + 1 < chapters.length ? widget.index + 1 : null;
     return GlassScaffold(
-      title: 'Rehber',
+      title: 'دليل',
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
@@ -120,7 +120,7 @@ class _GuideChapterPageState extends State<GuideChapterPage> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: chapter.children),
           ),
           if (next != null) ...[
-            const GroupHeader('SONRAKİ BÖLÜM'),
+            const GroupHeader('الفصل التالي'),
             Group(
               inset: 60,
               children: [
@@ -143,278 +143,278 @@ class _GuideChapterPageState extends State<GuideChapterPage> {
 
 /// Bölümlerin içeriği. [address]: telefonun ağ adresi (OBS adresini tam yazmak için); bilinmiyorsa genel yazılır.
 List<GuideChapter> guideChapters(String? address) {
-  final phone = address ?? 'telefonun adresi';
+  final phone = address ?? 'عنوان الهاتف';
   return [
     const GuideChapter(
       icon: CupertinoIcons.arrow_right_arrow_left,
       color: Tokens.accent,
-      title: 'Nasıl çalışır?',
-      subtitle: 'Bir bakışta bütün düzen',
+      title: 'كيف يعمل؟',
+      subtitle: 'كل التخطيط في لمحة',
       children: [
-        _P('GameTranslator üç cihazı birbirine bağlar. Oyun PS5\'te çalışır, sen TV\'de oynarsın; telefon arada çevirmenlik yapar:'),
+        _P('يقوم GameTranslator بتوصيل ثلاثة أجهزة. تعمل اللعبة على PS5\'، وأنت تلعب على TV\'؛ يترجم الهاتف أحيانًا:'),
         _Steps([
-          'Telefon, oyun görüntüsünü PS5\'ten Remote Play (Uzaktan Oynatma) ile alır. Kamera kullanılmaz.',
-          'Görüntüde altyazının çıktığı bölgeyi okur ve yazıyı çevirir.',
-          'Çeviriyi aynı Wi-Fi\'deki TV\'ye gönderir. TV\'deki GameTranslator uygulaması onu oyunun üstünde gösterir.',
+          'يستقبل الهاتف صورة اللعبة من جهاز PS5\' عن طريق اللعب عن بعد. لا يتم استخدام الكاميرا.',
+          'يقرأ المنطقة في الصورة التي يظهر فيها العنوان الفرعي ويترجم النص.',
+          'يرسل الترجمة إلى TV\' على نفس شبكة Wi-Fi\'. يعرضه تطبيق GameTranslator على TV\' فوق اللعبة.',
         ]),
-        _Sub('Neler gerekli?'),
+        _Sub('ما هو المطلوب؟'),
         _Bullets([
-          'PS5 ve üzerinde ikinci bir kullanıcı (aşağıda anlatılıyor).',
-          'GameTranslator TV uygulamasının kurulu olduğu bir TV: LG, Samsung ya da Android TV / Google TV.',
-          'Telefon, PS5 ve TV\'nin bağlı olduğu tek bir ev ağı (Wi-Fi).',
-          'Çevrimiçi çeviri için internet. İnternetsiz çalışan bir çeviri seçeneği de var.',
+          'مستخدم ثانٍ على PS5 والإصدارات الأحدث (كما هو موضح أدناه).',
+          'تلفزيون مثبت عليه تطبيق GameTranslator TV: LG أو Samsung أو Android TV / Google TV.',
+          'شبكة منزلية واحدة (Wi-Fi) يتصل بها الهاتف وجهاز PS5 وTV\'.',
+          'الإنترنت للترجمة عبر الإنترنت. هناك أيضًا خيار الترجمة الذي يعمل بدون الإنترنت.',
         ]),
-        _Tip('Kurulum bir kez yapılır. Sonrasında tek yapacağın: çeviriyi başlatmak ve TV\'de uygulamayı açmak.'),
+        _Tip('يتم التثبيت مرة واحدة. ثم كل ما عليك فعله هو: بدء الترجمة وفتح التطبيق على TV\'.'),
       ],
     ),
     const GuideChapter(
       icon: CupertinoIcons.gamecontroller_fill,
       color: Tokens.indigo,
-      title: 'PS5\'i hazırla',
-      subtitle: 'İkinci kullanıcı ve Uzaktan Oynatma',
+      title: 'تحضير PS5\'',
+      subtitle: 'المستخدم الثاني واللعب عن بعد',
       children: [
-        _Sub('1. İkinci bir kullanıcı ekle'),
-        _P('PS5, Uzaktan Oynatma ile bağlanan cihazı o kullanıcının kumandası sayar. Telefon senin hesabınla bağlanırsa '
-            'elindeki kumanda TV\'den kopar. Bu yüzden telefon ayrı bir kullanıcıyla bağlanır; sen kendi hesabınla oynamaya devam edersin.'),
+        _Sub('1. أضف مستخدمًا ثانيًا'),
+        _P('يتعامل جهاز PS5 مع الجهاز المتصل عبر ميزة اللعب عن بُعد على أنه وحدة التحكم الخاصة بهذا المستخدم. إذا كان الهاتف متصلاً بحسابك'
+            'جهاز التحكم عن بعد الذي في يده ينفصل عن TV\'. ولهذا السبب يتصل الهاتف بمستخدم منفصل؛ تستمر في اللعب بحسابك الخاص.'),
         _Steps([
-          'PS5\'te yeni bir kullanıcı ekle (ana ekrandaki profil resminden Kullanıcı Değiştir › Kullanıcı Ekle).',
-          'Bu kullanıcıya bir PSN hesabıyla giriş yap. Hesabın yoksa ücretsiz açabilirsin; PS Plus gerekmez.',
-          'Telefonda PSN girişini de bu ikinci hesapla yapacaksın.',
+          'قم بإضافة مستخدم جديد على PS5\' (تغيير المستخدم › إضافة مستخدم من صورة الملف الشخصي على الشاشة الرئيسية).',
+          'قم بتسجيل الدخول إلى هذا المستخدم باستخدام حساب PSN. إذا لم يكن لديك حساب، يمكنك فتح حساب مجانًا؛ لا حاجة إلى PS Plus.',
+          'ستقوم أيضًا بتسجيل الدخول إلى PSN على الهاتف باستخدام هذا الحساب الثاني.',
         ]),
-        _Sub('2. Uzaktan Oynatmayı aç'),
+        _Sub('2. قم بتشغيل اللعب عن بعد'),
         _Steps([
-          'PS5\'te ikinci kullanıcıya geç.',
-          'Ayarlar › Sistem › Uzaktan Oynatma\'ya gir.',
-          '"Uzaktan Oynatmayı Etkinleştir"i aç.',
+          'قم بالتبديل إلى المستخدم الثاني على PS5\'.',
+          'انتقل إلى الإعدادات > النظام > اللعب عن بعد \'.',
+          'قم بتشغيل "تمكين اللعب عن بعد".',
         ]),
-        _Sub('3. Dinlenme modundan uyandırma (isteğe bağlı)'),
-        _P('PS5 dinlenme modundayken çeviriyi başlattığında telefonun onu uyandırabilmesi için:'),
+        _Sub('3. الاستيقاظ من وضع الراحة (اختياري)'),
+        _P('بحيث عندما يبدأ جهاز PS5 في الترجمة أثناء وجوده في وضع السكون، يمكن للهاتف تنشيطه:'),
         _Steps([
-          'Ayarlar › Sistem › Güç Tasarrufu › Dinlenme Modunda Kullanılabilen Özellikler\'e gir.',
-          '"İnternete Bağlı Kal" ve "PS5\'in Ağdan Açılmasını Etkinleştir" seçeneklerini aç.',
+          'انتقل إلى الإعدادات > النظام > توفير الطاقة > الميزات المتوفرة في وضع الراحة\'.',
+          'قم بتشغيل "البقاء على اتصال بالإنترنت" و"تمكين تشغيل الشبكة على PS5\'".',
         ]),
-        _Tip('Uyandırmayı istemiyorsan telefonda Ayarlar › PS5 › "Dinlenme modundaysa uyandır"ı kapatabilirsin.'),
+        _Tip('إذا كنت لا ترغب في تنشيطه، فيمكنك إيقاف تشغيل الإعدادات › PS5 › "الاستيقاظ في وضع السكون" على الهاتف.'),
       ],
     ),
     const GuideChapter(
       icon: CupertinoIcons.link,
       color: Tokens.success,
-      title: 'Telefonu PS5 ile eşleştir',
-      subtitle: 'PSN girişi ve 8 haneli kod',
+      title: 'إقران الهاتف مع PS5',
+      subtitle: 'تسجيل دخول PSN ورمز مكون من 8 أرقام',
       children: [
-        _Sub('1. PSN ile giriş yap'),
+        _Sub('1. قم بتسجيل الدخول باستخدام PSN'),
         _Steps([
-          'Kurulum ekranında "PSN ile giriş yap"a dokun. Sony\'nin kendi giriş sayfası açılır.',
-          'PS5\'teki ikinci kullanıcının hesabıyla giriş yap.',
-          'Giriş bitince uygulama kuruluma kendiliğinden döner ve "PSN hesabı bağlandı" yazar.',
+          'في شاشة الإعداد، انقر فوق "تسجيل الدخول باستخدام PSN". يتم فتح الصفحة الرئيسية الخاصة بـ Sony\'.',
+          'قم بتسجيل الدخول بحساب المستخدم الثاني على PS5\'.',
+          'عند اكتمال تسجيل الدخول، يعود التطبيق تلقائيًا إلى التثبيت ويعرض رسالة "حساب PSN متصل".',
         ]),
-        _Tip('Şifren doğrudan Sony\'ye gider; uygulama yalnızca hesabının kimlik numarasını saklar.'),
-        _Sub('2. Eşleştirme kodunu gir'),
+        _Tip('تنتقل كلمة المرور الخاصة بك مباشرةً إلى Sony\'؛ يقوم التطبيق بتخزين رقم الهوية الخاص بحسابك فقط.'),
+        _Sub('2. أدخل رمز الاقتران'),
         _Steps([
-          'PS5\'te ikinci kullanıcıdayken Ayarlar › Sistem › Uzaktan Oynatma › "Cihaz Eşleştir"e gir.',
-          'Ekranda 8 haneli bir kod ve geri sayım görünür. Kod yaklaşık 5 dakika geçerlidir.',
-          'Telefonda "Bulunan konsol" listesinden PS5\'ini seç.',
-          'Kodu kutulara yaz ve "Eşleştir"e dokun.',
+          'بينما أنت المستخدم الثاني على PS5\'، انتقل إلى الإعدادات › النظام › اللعب عن بعد › "إقران الجهاز".',
+          'يظهر رمز مكون من 8 أرقام وعد تنازلي على الشاشة. الرمز صالح لمدة 5 دقائق تقريبًا.',
+          'حدد PS5\' من قائمة "تم العثور على وحدة التحكم" على الهاتف.',
+          'اكتب الرمز في المربعات وانقر على "إقران".',
         ]),
-        _Sub('PS5 listede yoksa'),
+        _Sub('إذا لم يكن PS5 مدرجًا في القائمة'),
         _Bullets([
-          'Telefon ve PS5 aynı Wi-Fi ağında mı kontrol et; misafir ağı ya da mobil veri olmamalı.',
-          '"Yenile"ye dokun.',
-          'Yine çıkmazsa "IP adresini elle yaz"a dokun. Adres PS5\'te Ayarlar › Ağ › Bağlantı Durumu › Bağlantı Durumunu Görüntüle\'de yazar.',
+          'تحقق مما إذا كان الهاتف وجهاز PS5 متصلين بشبكة Wi-Fi نفسها؛ يجب ألا تكون هناك شبكة ضيف أو بيانات جوال.',
+          'اضغط على "تحديث".',
+          'إذا ظل الأمر لا يعمل، فانقر على "اكتب عنوان IP يدويًا". العنوان مكتوب في PS5\' في الإعدادات › الشبكة › حالة الاتصال › عرض حالة الاتصال \'.',
         ]),
-        _Tip('Eşleştirme bir kez yapılır. PS5\'in adresi değişirse uygulama onu ağda yeniden bulur.'),
+        _Tip('يتم الاقتران مرة واحدة. إذا تغير عنوان PS5\'، فسيجده التطبيق على الشبكة مرة أخرى.'),
       ],
     ),
     GuideChapter(
       icon: CupertinoIcons.tv_fill,
       color: Tokens.purple,
-      title: 'TV\'yi hazırla',
-      subtitle: 'Desteklenen TV\'ler ve TV uygulaması',
+      title: 'إعداد TV\'',
+      subtitle: 'دعم TV\'s وتطبيق التلفزيون',
       children: [
-        const _P('Altyazıyı TV\'de gösteren ayrı bir GameTranslator TV uygulaması vardır. Henüz mağazalarda olmadığı için TV\'ye '
-            'bir kez kurulur. LG ve Android TV\'ye bu telefondan kurabilirsin; Samsung\'a kurulum şimdilik bilgisayardan yapılır.'),
+        const _P('يوجد تطبيق GameTranslator TV منفصل يعرض الترجمات على TV\'. نظرًا لعدم توفره في المتاجر بعد، انتقل إلى TV\''
+            'بمجرد تثبيتها. يمكنك تثبيته على LG وAndroid TV\' من هذا الهاتف؛ يتم التثبيت على Samsung\' حاليًا من الكمبيوتر.'),
         const InstallTvButton(),
-        const _Sub('Hangi TV\'ler destekleniyor?'),
+        const _Sub('ما هي أجهزة TV\' المدعومة؟'),
         const _Table([
-          ('LG', 'webOS 4 ve üstü', true),
-          ('Samsung', 'Tizen, 2019 ve sonrası', true),
-          ('Android TV / Google TV', 'Vestel, Arçelik, Beko, Grundig, Philips, Sony, TCL ve diğerleri', true),
-          ('Diğerleri', 'Vestel/Arçelik/Beko/Grundig\'in Linux modelleri, Philips Saphi, Titan OS', false),
+          ('إل جي', 'ويب أو إس 4 وما فوق', true),
+          ('سامسونج', 'تايزن، 2019 وما بعده', true),
+          ('أندرويد تي في/جوجل تي في', 'فيستل، أرتشيليك، بيكو، جروندج، فيليبس، سوني، تي سي إل وغيرها', true),
+          ('آحرون', 'نماذج Linux من Vestel/Arçelik/Beko/Grundig\'، Philips Saphi، Titan OS', false),
         ]),
-        const _Tip('TV\'n Android mi? Ana ekranında Google Play Store ya da "Google TV" yazıyorsa Android\'dir.'),
-        const _Sub('LG'),
+        const _Tip('TV\'n أندرويد؟ إذا كان مكتوبًا Google Play Store أو "Google TV" على الشاشة الرئيسية، فهو Android\'.'),
+        const _Sub('إل جي'),
         const _Steps([
-          'Bilgisayardan webostv.developer.lge.com adresinde ücretsiz bir LG geliştirici hesabı aç.',
-          'TV\'de LG Content Store\'dan "Developer Mode" uygulamasını kur, hesabınla giriş yap ve "Dev Mode Status"u aç. TV yeniden başlar.',
-          'TV\'de Developer Mode uygulamasında "Key Server"ı aç.',
-          'Telefonda "TV uygulamasını kur" sihirbazında LG\'yi seç, TV\'ni bul ve ekrandaki 6 karakterli parolayı yaz '
-              '(bilgisayardaki GameTranslator\'ın TV adımı da aynısını yapar).',
+          'افتح حساب مطور LG مجانيًا على webostv.developer.lge.com من جهاز الكمبيوتر الخاص بك.',
+          'قم بتثبيت تطبيق "وضع المطور" من LG Content Store\' على TV\'، وقم بتسجيل الدخول باستخدام حسابك وتشغيل "حالة وضع المطور". يبدأ التلفاز من جديد.',
+          'افتح "Key Server" في تطبيق وضع المطور على TV\'.',
+          'في معالج "تثبيت تطبيق TV" على الهاتف، حدد LG\'، وابحث عن TV\' واكتب كلمة المرور المكونة من 6 أحرف على الشاشة'
+              '(الخطوة التلفزيونية لـ GameTranslator\' على الكمبيوتر تفعل الشيء نفسه).',
         ]),
-        const _P('LG\'de geliştirici modu en çok 1000 saat açık kalır. Uzun süre kullanmayacaksan süre dolmadan Developer Mode '
-            'uygulamasında "EXTEND"e bas; süre dolarsa TV uygulaması silinir ve baştan kurman gerekir.'),
-        const _Sub('Samsung'),
+        const _P('على LG\'، يظل وضع المطور قيد التشغيل لمدة أقصاها 1000 ساعة. إذا كنت لن تستخدمه لفترة طويلة، فانتقل إلى وضع المطور قبل انتهاء صلاحيته.'
+            'اضغط على "تمديد" في التطبيق؛ إذا انتهى الوقت، فسيتم حذف تطبيق التلفزيون وسيتعين عليك تثبيته من البداية.'),
+        const _Sub('سامسونج'),
         const _Steps([
-          'TV\'de Uygulamalar ekranını aç ve kumandayla 1 2 3 4 5 tuşlarına bas. Geliştirici modu penceresi açılır.',
-          '"Developer mode"u aç, "Host PC IP" alanına bilgisayarının adresini yaz.',
-          'TV\'yi güç tuşunu basılı tutarak tam kapatıp aç.',
-          'Bilgisayardaki GameTranslator\'ın TV adımında TV\'ni seç. Açılan sayfada ücretsiz bir Samsung hesabıyla giriş yap; uygulama imzalanıp kurulur.',
+          'افتح شاشة التطبيقات على TV\' واضغط 1 2 3 4 5 على جهاز التحكم عن بعد. يتم فتح نافذة وضع المطور.',
+          'افتح "وضع المطور" واكتب عنوان جهاز الكمبيوتر الخاص بك في حقل "Host PC IP".',
+          'قم بإيقاف تشغيل TV\' بالكامل وتشغيله عن طريق الضغط باستمرار على زر الطاقة.',
+          'حدد TV\' في الخطوة التلفزيونية الخاصة بـ GameTranslator\' على الكمبيوتر. في الصفحة التي تفتح، قم بتسجيل الدخول باستخدام حساب Samsung مجاني؛ تم توقيع التطبيق وتثبيته.',
         ]),
-        const _Sub('Android TV / Google TV'),
+        const _Sub('أندرويد تي في/جوجل تي في'),
         const _Steps([
-          'TV\'de Ayarlar › Cihaz Tercihleri › Hakkında\'ya gir (Google TV\'de Ayarlar › Sistem › Hakkında).',
-          '"Yapı numarası"nın üstünde Tamam tuşuna 7 kez bas.',
-          'Geliştirici seçenekleri\'nden "USB hata ayıklama"yı (varsa "Ağ hata ayıklama"yı da) aç.',
-          'Telefonda "TV uygulamasını kur" sihirbazında "Android TV / Google TV"yi seç ve TV\'deki izin sorusunu onayla.',
+          'في TV\'، انتقل إلى الإعدادات › تفضيلات الجهاز › About\' (في Google TV\'، انتقل إلى الإعدادات › النظام › حول).',
+          'فوق "رقم الإصدار"، اضغط على "موافق" 7 مرات.',
+          'قم بتشغيل "تصحيح أخطاء USB" (أيضًا "تصحيح أخطاء الشبكة" إذا كان متاحًا) في خيارات المطور\'.',
+          'في معالج "تثبيت تطبيق TV" على الهاتف، حدد "Android TV / Google TV" وقم بتأكيد سؤال الإذن في TV\'.',
         ]),
-        const _P('TV ağdan hata ayıklamaya izin vermiyorsa USB bellekle de kurabilirsin: GameTranslator\'ın sürümler sayfasından '
-            'TV uygulamasının APK dosyasını indir, belleğe kopyala ve TV\'de bir dosya yöneticisiyle açıp kur.'),
-        const _Sub('Kurulduktan sonra'),
-        const _P('TV uygulaması telefonu ağda kendisi bulur; telefona TV\'nin adresini yazman gerekmez. Samsung\'da bilgisayara '
-            'yalnızca kurulum için ihtiyaç var; sonrasında kapalı kalabilir.'),
-        const _Sub('Yayın yapanlar için: OBS'),
-        _P('Çeviri açıkken altyazılar bir web sayfası olarak da sunulur. OBS\'te "Tarayıcı Kaynağı" ekleyip adres olarak '
+        const _P('إذا كان التلفزيون لا يسمح بتصحيح أخطاء الشبكة، فيمكنك أيضًا تثبيته باستخدام محرك أقراص USB: من صفحة إصدارات GameTranslator\''
+            'قم بتنزيل ملف APK الخاص بتطبيق التلفزيون، وانسخه إلى الذاكرة وافتحه باستخدام مدير الملفات في TV\' وقم بتثبيته.'),
+        const _Sub('بعد التثبيت'),
+        const _P('يجد تطبيق التلفزيون الهاتف على الشبكة نفسها؛ لا تحتاج إلى كتابة عنوان TV\' في هاتفك. Samsung\' إلى الكمبيوتر'
+            'مطلوب فقط للتثبيت. ومن الممكن أن تظل مغلقة بعد ذلك.'),
+        const _Sub('للمذيعين: OBS'),
+        _P('عند تشغيل الترجمة، يتم عرض الترجمات أيضًا كصفحة ويب. أضف "مصدر المتصفح" إلى OBS\' واستخدمه كعنوان.'
             'http://$phone:8787/obs yaz (1920×1080). Sayfanın zemini saydamdır; TV\'nin tarayıcısında oyunun üstünde göstermez, '
-            'yalnızca yayın ve kayıt düzenleri içindir.'),
+            'لتخطيطات البث والتسجيل فقط.'),
       ],
     ),
     const GuideChapter(
       icon: CupertinoIcons.play_fill,
       color: Tokens.accent,
-      title: 'İlk kullanım',
-      subtitle: 'Çeviriyi başlat ve TV\'de gör',
+      title: 'الاستخدام الأول',
+      subtitle: 'ابدأ الترجمة وشاهدها على TV\'',
       children: [
         _Steps([
-          'PS5\'te oyunu kendi hesabınla aç ve oyunun ayarlarından altyazıları aç.',
-          'Telefonda ana ekrandaki büyük düğmeye dokun. İlk seferde bildirim izni sorulur; izin ver ki çeviri arka planda sürsün.',
-          'Durum "Çeviri açık" olunca PS5 kartı "Bağlı" yazar. İlk bağlantı birkaç saniye sürer.',
-          'TV\'de GameTranslator uygulamasını aç. Birkaç saniye içinde telefondaki TV kartı "Bağlı" olur.',
-          'TV\'de oyun görüntüsü gelmezse Tamam tuşuyla paneli aç, sol ve sağ tuşlarıyla PS5\'in bağlı olduğu HDMI girişini seç.',
-          'Telefonda "TV\'ye deneme altyazısı gönder"e dokun. TV\'de yazıyı görüyorsan her şey hazır.',
+          'افتح اللعبة على PS5\' بحسابك الخاص وقم بتشغيل الترجمة في إعدادات اللعبة.',
+          'على الهاتف، اضغط على الزر الكبير الموجود على الشاشة الرئيسية. سيُطلب منك إذن الإخطار في المرة الأولى؛ دع الترجمة تستمر في الخلفية.',
+          'عندما تكون الحالة "تشغيل الترجمة"، ستظهر رسالة "متصل" على بطاقة PS5. يستغرق الاتصال الأولي بضع ثوانٍ.',
+          'افتح GameTranslator على TV\'. في غضون ثوانٍ قليلة، ستكون بطاقة التلفزيون الموجودة على الهاتف "متصلة".',
+          'إذا لم تظهر صورة اللعبة على TV\'، فافتح اللوحة باستخدام الزر "موافق" وحدد إدخال HDMI الذي يتصل به PS5\' بالزرين الأيسر والأيمن.',
+          'اضغط على "إرسال ترجمات اختبارية إلى TV\'" على الهاتف. إذا رأيت النص على TV\'، فكل شيء جاهز.',
         ]),
-        _Tip('Çeviri açıkken telefonun ekranını kapatabilirsin. Durdurmak için uygulamadaki düğmeye ya da bildirimdeki "Durdur"a dokun.'),
-        _Sub('Sonraki seferler'),
-        _P('Yalnızca iki adım: telefonda çeviriyi başlat, TV\'de GameTranslator\'ı aç.'),
-        _Sub('Pil ve ısınma'),
-        _P('Telefon sürekli video çözüp yazı okur; uzun oturumlarda şarja takılı kullan.'),
+        _Tip('يمكنك إيقاف تشغيل شاشة هاتفك أثناء تشغيل الترجمة. للتوقف، اضغط على الزر الموجود في التطبيق أو "إيقاف" في الإشعار.'),
+        _Sub('الرحلات القادمة'),
+        _P('خطوتين فقط: ابدأ الترجمة على الهاتف، وافتح GameTranslator\'on TV\'.'),
+        _Sub('البطارية والتدفئة'),
+        _P('يقوم الهاتف باستمرار بفك تشفير الفيديو وقراءة النص؛ استخدامه على تهمة لجلسات طويلة.'),
       ],
     ),
     const GuideChapter(
       icon: CupertinoIcons.dot_radiowaves_left_right,
       color: Tokens.gray,
-      title: 'TV kumandası',
-      subtitle: 'TV uygulamasındaki tuşlar',
+      title: 'جهاز التحكم عن بعد للتلفزيون',
+      subtitle: 'المفاتيح في تطبيق التلفزيون',
       children: [
-        _P('TV\'de GameTranslator açıkken kumandanın tuşları şunları yapar:'),
+        _P('عندما يكون GameTranslator مفتوحًا على TV\'، تقوم أزرار جهاز التحكم عن بعد بما يلي:'),
         _Keys([
-          ('Tamam', 'Durum panelini açar ve kapatır (HDMI girişi, bağlantı durumu).'),
-          ('Sol / Sağ', 'Panel açıkken HDMI girişini değiştirir.'),
-          ('1 – 4', 'HDMI girişini doğrudan seçer.'),
-          ('Yukarı / Aşağı', 'Altyazıyı ekranda yukarı ya da aşağı kaydırır.'),
-          ('Kırmızı', 'TV\'nin kendi deneme yazısını gösterir.'),
-          ('Yeşil', 'Durum panelini açar ve kapatır.'),
-          ('Mavi', 'Örnek altyazılarla tanıtımı başlatır ya da durdurur.'),
-          ('Geri', 'Uygulamadan çıkar.'),
+          ('نعم', 'يفتح ويغلق لوحة الحالة (إدخال HDMI، حالة الاتصال).'),
+          ('يسار / يمين', 'يقوم بتبديل دخل HDMI عندما تكون اللوحة مفتوحة.'),
+          ('1 – 4', 'يحدد إدخال HDMI مباشرة.'),
+          ('أعلى/أسفل', 'لتحريك الترجمة لأعلى أو لأسفل على الشاشة.'),
+          ('أحمر', 'يعرض مقال TV\' الخاص.'),
+          ('أخضر', 'فتح وإغلاق لوحة الحالة.'),
+          ('أزرق', 'يبدأ العرض التوضيحي أو يوقفه باستخدام عينة من الترجمة.'),
+          ('خلف', 'قم بإنهاء التطبيق.'),
         ]),
-        _Tip('Oyunu PS5 kumandasıyla oynarsın; TV kumandası yalnızca bu ayarlar için gerekir.'),
+        _Tip('تلعب اللعبة باستخدام وحدة تحكم PS5؛ جهاز التحكم عن بعد الخاص بالتلفزيون مطلوب لهذه الإعدادات فقط.'),
       ],
     ),
     const GuideChapter(
       icon: CupertinoIcons.crop,
       color: Tokens.teal,
-      title: 'Altyazı bölgesini ayarla',
-      subtitle: 'Telefonun ekranda nereye bakacağı',
+      title: 'تعيين منطقة الترجمة',
+      subtitle: 'أين تنظر على شاشة الهاتف',
       children: [
-        _P('Telefon bütün ekranı değil, yalnızca altyazının çıktığı bölgeyi okur. Bölge yanlış yerdeyse çeviri gelmez ya da '
-            'ekrandaki başka yazılar çevrilir.'),
+        _P('لا يقرأ الهاتف الشاشة بأكملها، بل يقرأ فقط المنطقة التي تظهر فيها الترجمة. إذا كانت المنطقة في المكان الخطأ، فلن يكون هناك ترجمة أو'
+            'تتم ترجمة النصوص الأخرى التي تظهر على الشاشة.'),
         _Steps([
-          'Çeviri açıkken oyunda bir altyazı çıkmasını bekle.',
-          'Ana ekrandaki önizlemede mavi çerçeveye bak: altyazının tamamı çerçevenin içinde olmalı.',
-          'Değilse "Altyazı bölgesini ayarla"ya dokun. Üst, Alt, Sol ya da Sağ kenarı seç ve sürgüyle yerini değiştir.',
-          'Ana ekrandaki "Çerçevede okunan" satırı telefonun o anda ne okuduğunu gösterir; altyazının tamamı orada görünmeli.',
+          'مع تشغيل الترجمة، انتظر حتى تظهر الترجمة في اللعبة.',
+          'ابحث عن الإطار الأزرق في المعاينة على الشاشة الرئيسية: يجب أن يكون العنوان الفرعي بأكمله داخل الإطار.',
+          'إذا لم يكن الأمر كذلك، فانقر على "تعيين منطقة الترجمة". حدد الحافة العلوية أو السفلية أو اليسرى أو اليمنى وحركها باستخدام شريط التمرير.',
+          'يعرض سطر "القراءة في الإطار" الموجود على الشاشة الرئيسية ما يقرأه الهاتف حاليًا؛ يجب أن يظهر العنوان الفرعي بأكمله هناك.',
         ]),
         _Bullets([
-          'Cümlenin başı ya da sonu kesiliyorsa çerçeveyi genişlet.',
-          'İki satırlı altyazılarda üst satır kayboluyorsa üst kenarı yukarı al.',
-          'Görev yazıları, harita adları gibi başka yazılar çevriliyorsa çerçeveyi daralt.',
+          'إذا تم قطع بداية الجملة أو نهايتها، قم بتوسيع الإطار.',
+          'إذا اختفى السطر العلوي في ترجمات مكونة من سطرين، فحرك الحافة العلوية لأعلى.',
+          'في حالة ترجمة نصوص أخرى مثل نصوص المهمة وأسماء الخرائط، قم بتضييق الإطار.',
         ]),
-        _Tip('Her oyun altyazıyı farklı yere koyar; yeni bir oyuna başladığında bölgeye bir kez bakmak yeter.'),
+        _Tip('تضع كل لعبة الترجمات في مكان مختلف؛ عندما تبدأ لعبة جديدة، تكفيك نظرة واحدة على المنطقة.'),
       ],
     ),
     const GuideChapter(
       icon: CupertinoIcons.textformat,
       color: Tokens.warning,
-      title: 'Çeviri ve görünüm',
-      subtitle: 'Motor, sözlük ve TV\'deki yazı',
+      title: 'الترجمة والمظهر',
+      subtitle: 'المحرك والقاموس والنص في TV\'',
       children: [
-        _Sub('Çeviri motoru'),
+        _Sub('محرك الترجمة'),
         _Keys([
-          ('Google', 'İnternet ister, anahtar gerekmez. Çoğu oyun için en iyi başlangıç.'),
-          ('DeepL', 'Daha doğal cümleler kurar. DeepL\'den aldığın kendi API anahtarını yazman gerekir.'),
-          ('Cihazda', 'İnternetsiz çalışır; kalitesi diğerlerinden düşüktür. İlk kullanımda dil modeli bir kez iner.'),
+          ('جوجل', 'يتطلب الإنترنت، لا يوجد مفتاح مطلوب. أفضل بداية لمعظم الألعاب.'),
+          ('ديب إل', 'يصنع جملاً أكثر طبيعية. تحتاج إلى كتابة مفتاح API الخاص بك الذي حصلت عليه من DeepL\'.'),
+          ('على الجهاز', 'يعمل بدون انترنت؛ جودتها أقل من غيرها. عند أول استخدام، ينزل نموذج اللغة مرة واحدة.'),
         ]),
-        _P('İnternet koparsa çeviri kendiliğinden cihazdaki modele geçer ve bağlantı gelince geri döner.'),
-        _Sub('Terim sözlüğü'),
-        _P('Çevirinin bozduğu karakter adlarını ve oyun terimlerini sabitlemek içindir (yalnız İngilizce → Türkçe). '
-            'Ayarlar › Çeviri › Terim sözlüğü\'nden açılır. "terms" içindeki terimler yazdığın Türkçeyle çevrilir, '
-            '"keep" içindeki adlar olduğu gibi kalır.'),
-        _Sub('TV\'deki görünüm'),
+        _P('في حالة انقطاع الإنترنت، تتحول الترجمة تلقائيًا إلى النموذج الموجود على الجهاز وتعود عند استعادة الاتصال.'),
+        _Sub('معجم المصطلحات'),
+        _P('لإصلاح أسماء الشخصيات ومصطلحات اللعبة التي أفسدتها الترجمة (الإنجليزية → التركية فقط).'
+            'يتم فتحه من الإعدادات › الترجمة › المسرد\'. المصطلحات الموجودة في "المصطلحات" مترجمة إلى اللغة التركية التي كتبتها،'
+            'تظل الأسماء في "الاحتفاظ" كما هي.'),
+        _Sub('الظهور على شاشة التلفزيون\''),
         _Bullets([
-          'Yazı boyutu ve rengi: Ayarlar › TV\'de görünüm.',
-          'Altyazının yeri: oyunun altyazısını örterek, üstünde, altında ya da ekranın altında sabit.',
-          'Zemin koyuluğu: yazının arkasındaki siyah kutunun koyuluğu. Oyunun altyazısını örtüyorsan yüksek tut.',
+          'حجم الخط ولونه: الإعدادات › المظهر على TV\'.',
+          'موقع الترجمة: ثابت في أعلى الشاشة أو أسفلها أو أسفلها، بحيث يغطي الترجمة الخاصة باللعبة.',
+          'ظلام الخلفية: ظلام الصندوق الأسود خلف النص. إذا كنت تقوم بتغطية ترجمات اللعبة، فاجعلها عالية.',
         ]),
       ],
     ),
     const GuideChapter(
       icon: CupertinoIcons.wrench_fill,
       color: Tokens.danger,
-      title: 'Sorun giderme',
-      subtitle: 'Sık karşılaşılan durumlar',
+      title: 'استكشاف الأخطاء وإصلاحها',
+      subtitle: 'المواقف الشائعة',
       children: [
-        _Qa('Çeviri başlamıyor, "PS5\'e bağlanılıyor"da kalıyor', [
-          'PS5 açık mı? Dinlenme modundaysa uyandırma ayarlarını "PS5\'i hazırla" bölümündeki gibi aç.',
-          'Telefon Wi-Fi\'ye bağlı ve PS5 ile aynı ağda mı?',
-          'PS5\'te Uzaktan Oynatma açık mı?',
+        _Qa('الترجمة لا تبدأ، تبقى عند "الاتصال بـ PS5\'"', [
+          'هل تم تشغيل PS5؟ إذا كان في وضع السكون، فقم بتشغيل إعدادات التنبيه كما في قسم "تحضير PS5\'".',
+          'هل الهاتف متصل بشبكة Wi-Fi\' وعلى نفس الشبكة مثل جهاز PS5؟',
+          'هل تم تمكين اللعب عن بعد على PS5\'؟',
         ]),
-        _Qa('"Uzaktan Oynatma başka bir cihaz tarafından kullanılıyor"', [
-          'PS5 aynı anda tek bir Uzaktan Oynatma bağlantısı kabul eder. Bilgisayardaki GameTranslator ya da başka bir Remote Play uygulaması açıksa kapat.',
-          'Az önce durdurduysan birkaç saniye bekle; uygulama kendiliğinden yeniden dener.',
+        _Qa('""اللعب عن بعد قيد الاستخدام بواسطة جهاز آخر""', [
+          'يقبل PS5 اتصالاً واحدًا للعب عن بُعد في كل مرة. إذا كان GameTranslator أو تطبيق Remote Play آخر مفتوحًا على الكمبيوتر، فأغلقه.',
+          'إذا أوقفته للتو، انتظر بضع ثوانٍ؛ سيحاول التطبيق مرة أخرى تلقائيًا.',
         ]),
-        _Qa('Kumandam TV\'den koptu', [
-          'Telefon senin oynadığın hesapla bağlanmış. Ayarlar › PS5 › "PSN hesabını değiştir" ile ikinci kullanıcının hesabına geç.',
+        _Qa('جهاز التحكم عن بعد انقطع عن TV\'', [
+          'الهاتف مرتبط بالحساب الذي تلعب به. قم بالتبديل إلى حساب المستخدم الثاني عبر الإعدادات › PS5 › "تغيير حساب PSN".',
         ]),
-        _Qa('TV kartı "Bekleniyor"da kalıyor', [
-        'TV\'de GameTranslator uygulaması açık mı?',
-        'TV, telefonla aynı ağda mı? Misafir ağı ya da farklı bir modem olmamalı.',
-        'Bilgisayardaki GameTranslator açıksa kapat; TV ağda ilk bulduğuna bağlanır.',
-        'TV uygulaması daha önce bilgisayara bağlandıysa o adreste takılı kalmış olabilir. Aşağıdaki "TV telefonu bulamıyorsa" adımlarını uygula.',
+        _Qa('تبقى بطاقة البث التلفزيوني على وضع "الانتظار"', [
+        'هل تطبيق GameTranslator مفتوح على TV\'؟',
+        'هل التلفاز على نفس شبكة الهاتف؟ لا ينبغي أن تكون شبكة ضيف أو مودم مختلف.',
+        'إذا كان GameTranslator مفتوحًا على الكمبيوتر، فأغلقه؛ يتصل التلفزيون بأول جهاز يجده على الشبكة.',
+        'إذا كان تطبيق التلفزيون متصلاً بالكمبيوتر من قبل، فقد يكون عالقًا في هذا العنوان. اتبع خطوات "إذا لم يتمكن التلفزيون من العثور على الهاتف" أدناه.',
       ]),
-      _Sub('TV telefonu bulamıyorsa'),
+      _Sub('إذا لم يتمكن التلفزيون من العثور على الهاتف'),
       ...tvRecoverySteps,
-      _Qa('TV\'de oyun görüntüsü yok, ekran siyah', [
-          'Tamam ile paneli aç ve sol/sağ ile PS5\'in bağlı olduğu HDMI girişini seç.',
-          'Bazı Android TV\'ler HDMI görüntüsünü başka uygulamaya vermez; o TV\'lerde altyazı görünür ama arkası siyah kalır.',
+      _Qa('لا توجد صورة للعبة على TV\'، الشاشة سوداء', [
+          'افتح اللوحة باستخدام OK وحدد إدخال HDMI الذي يتصل به PS5\' باستخدام اليسار/اليمين.',
+          'لا تقوم بعض أجهزة Android TV\'s بإخراج صورة HDMI إلى تطبيق آخر؛ o تحتوي قنوات TV\'s على ترجمات لكن الخلفية تظل سوداء.',
         ]),
-        _Qa('Altyazı hiç gelmiyor', [
-          'Oyunun kendi altyazıları açık mı?',
-          'Ana ekrandaki "Çerçevede okunan" boşsa bölge yanlış yerdedir; "Altyazı bölgesini ayarla" bölümüne bak.',
-          'Oyunun dili ile Ayarlar › Çeviri\'deki kaynak dil aynı mı?',
-          '"TV\'ye deneme altyazısı gönder" çalışıyorsa TV bağlantısı sağlamdır; sorun okumadadır.',
+        _Qa('ترجمات لا تأتي أبدا', [
+          'هل تم تشغيل الترجمة الخاصة باللعبة؟',
+          'إذا كانت عبارة "القراءة في الإطار" على الشاشة الرئيسية فارغة، فهذا يعني أن المنطقة في المكان الخطأ؛ راجع قسم "تعيين منطقة الترجمة".',
+          'هل لغة اللعبة هي نفس اللغة المصدر في الإعدادات › Translation\'؟',
+          'إذا نجح "إرسال عنوان فرعي اختباري إلى TV\'"، يكون اتصال التلفزيون مستقرًا؛ المشكلة في القراءة .',
         ]),
-        _Qa('Çeviri yarım ya da anlamsız', [
-          'Cümlenin başı ya da sonu eksikse bölgeyi genişlet.',
-          'Motor "Cihazda" ise Google ya da DeepL\'e geç.',
-          'Çok süslü ya da çok küçük yazı tiplerinde okuma zorlaşır; oyunda altyazı boyutunu büyütmek ve arka plan eklemek yardımcı olur.',
+        _Qa('الترجمة غير كاملة أو لا معنى لها', [
+          'إذا كانت بداية الجملة أو نهايتها مفقودة، قم بتوسيع المنطقة.',
+          'إذا كان المحرك "على الجهاز"، فانتقل إلى Google أو DeepL\'.',
+          'الخطوط الفاخرة جدًا أو الصغيرة جدًا تجعل القراءة صعبة؛ يساعد على زيادة حجم الترجمة وإضافة الخلفية في اللعبة.',
         ]),
-        _Qa('Çeviri geç geliyor', [
-          'Telefon ve PS5 mümkünse modeme yakın olsun; zayıf Wi-Fi görüntüyü geciktirir.',
-          'Çevrimiçi motorlarda internet hızı da etkiler.',
+        _Qa('الترجمة تأتي متأخرة', [
+          'إذا أمكن، أبقِ الهاتف وجهاز PS5 بالقرب من المودم؛ يؤدي ضعف شبكة Wi-Fi إلى تأخير الصورة.',
+          'تؤثر سرعة الإنترنت أيضًا على محركات الإنترنت.',
         ]),
-        _Qa('Ekranı kapatınca çeviri duruyor', [
-          'Telefonun pil tasarrufu uygulamayı durduruyor olabilir. Telefonun Ayarlar › Uygulamalar › GameTranslator › Pil bölümünden "Kısıtlanmamış"ı seç.',
-          'Bildirim iznini kapattıysan aç; arka plan servisi bildirimle çalışır.',
+        _Qa('تتوقف الترجمة عند إيقاف تشغيل الشاشة', [
+          'قد يكون موفر طاقة بطارية هاتفك هو الذي يوقف التطبيق. حدد "غير مقيد" من إعدادات هاتفك > التطبيقات > GameTranslator > قسم البطارية.',
+          'إذا قمت بإيقاف تشغيل إذن الإشعارات، فقم بتشغيله؛ تعمل خدمة الخلفية مع الإخطار.',
         ]),
-        _Tip('Çözemediğin bir sorun olursa Ayarlar › Hakkında › Günlük\'teki kayıtları kopyalayıp paylaşabilirsin.'),
+        _Tip('إذا كانت هناك مشكلة لا يمكنك حلها، فيمكنك نسخ السجلات ومشاركتها في الإعدادات › حول › Log\'.'),
       ],
     ),
   ];
@@ -611,7 +611,7 @@ class _Table extends StatelessWidget {
                           Text(rows[i].$1, style: const TextStyle(fontWeight: FontWeight.w700)),
                           Text(rows[i].$2, style: const TextStyle(color: Tokens.textSecondary, fontSize: 13.5, height: 1.35)),
                           if (!rows[i].$3)
-                            const Text('Desteklenmiyor: bu TV\'lere uygulama kurulamıyor.', style: TextStyle(color: Tokens.danger, fontSize: 13)),
+                            const Text('غير مدعوم: لا يمكن تثبيت التطبيقات على أجهزة TV\'s هذه.', style: TextStyle(color: Tokens.danger, fontSize: 13)),
                         ],
                       ),
                     ),
@@ -660,37 +660,37 @@ class _Qa extends StatelessWidget {
 /// TV uygulaması eski bir adrese (ör. kapalı bilgisayara) takılı kaldığında yapılacaklar. Sorun gidermede ve
 /// ana ekrandaki uyarıdan açılan sayfada aynı metin kullanılır.
 const tvRecoverySteps = <Widget>[
-  _P('TV uygulaması en son bağlandığı adresi hatırlar. Daha önce bilgisayara bağlandıysa, telefonu aramak yerine o '
-      'adresi denemeye devam edebilir. Kayıtlı adresi silince uygulama ağı baştan tarar ve telefonu bulur.'),
-  _Sub('Android TV / Google TV (TCL, Sony, Philips, Vestel…)'),
+  _P('يتذكر تطبيق التلفزيون العنوان الذي تم الاتصال به آخر مرة. إذا تم توصيله بالكمبيوتر من قبل، بدلاً من الاتصال بالهاتف'
+      'يمكن الاستمرار في محاولة العنوان. عند حذف العنوان المسجل، يقوم التطبيق بمسح الشبكة مرة أخرى والعثور على الهاتف.'),
+  _Sub('Android TV / Google TV (TCL، Sony، Philips، Vestel...)'),
   _Steps([
-    'TV\'de Ayarlar › Uygulamalar\'a gir ve listeden GameTranslator\'ı seç ("Tüm uygulamaları göster" gerekebilir).',
-    '"Verileri temizle"yi seç ve onayla. Uygulama silinmez, yalnızca kayıtlı adres ve ayarlar sıfırlanır.',
-    'Telefonda çeviri açıkken TV\'de GameTranslator\'ı yeniden aç.',
-    'Bir dakikaya kadar bekle; telefondaki TV karosu "Bağlı" olur.',
+    'على TV\'، انتقل إلى الإعدادات › Applications\' وحدد GameTranslator\' من القائمة (قد يكون عرض جميع التطبيقات" مطلوبًا).',
+    'حدد "مسح البيانات" وأكد. لا يتم حذف التطبيق، تتم إعادة تعيين العنوان المسجل والإعدادات فقط.',
+    'أثناء فتح الترجمة على الهاتف، أعد فتح GameTranslator\' على TV\'.',
+    'انتظر لمدة دقيقة. يصبح مربع التلفزيون الموجود على الهاتف "متصلاً".',
   ]),
-  _Sub('Samsung ve LG'),
+  _Sub('سامسونج و إل جي'),
   _Steps([
-    'Bu TV\'lerde uygulama verisi ayrı silinemez: GameTranslator\'ı TV\'den kaldır.',
-    'Bilgisayardaki GameTranslator ile yeniden kur ("TV\'yi hazırla" bölümündeki adımlar).',
-    'Bilgisayardaki GameTranslator\'ı kapat, telefonda çeviriyi başlat ve TV\'de uygulamayı aç.',
+    'لا يمكن حذف بيانات التطبيق بشكل منفصل على TV\'s: قم بإزالة GameTranslator\' من TV\'.',
+    'أعد التثبيت باستخدام GameTranslator على الكمبيوتر (الخطوات في قسم "تحضير TV\'").',
+    'أغلق GameTranslator\' على الكمبيوتر، وابدأ الترجمة على الهاتف، وافتح التطبيق على TV\'.',
   ]),
-  _Sub('Yine olmazsa'),
+  _Sub('إن لم يكن مرة أخرى'),
   _Bullets([
-    'Bilgisayardaki GameTranslator kapalı mı? Açıksa TV ona bağlanır.',
-    'Telefon ve TV aynı Wi-Fi ağında mı? Modemde "istemci yalıtımı" (AP isolation) açıksa cihazlar birbirini göremez.',
-    'TV\'de HDMI ayarı da sıfırlandığı için Tamam ile paneli açıp PS5\'in girişini yeniden seç.',
+    'هل تم إيقاف تشغيل GameTranslator على الكمبيوتر؟ إذا كان قيد التشغيل، يتصل التلفزيون به.',
+    'هل الهاتف والتلفزيون على نفس شبكة Wi-Fi؟ إذا تم تشغيل "عزل العميل" (عزل AP) في المودم، فلن تتمكن الأجهزة من رؤية بعضها البعض.',
+    'نظرًا لإعادة ضبط إعداد HDMI على TV\' أيضًا، افتح اللوحة باستخدام "موافق" وحدد إدخال PS5\' مرة أخرى.',
   ]),
 ];
 
-/// Ana ekrandaki "TV hâlâ bağlanmadı" uyarısından açılan yardım sayfası.
+/// Ana ekrandaki "التلفزيون لا يزال غير متصل" uyarısından açılan yardım sayfası.
 class TvHelpPage extends StatelessWidget {
   const TvHelpPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return GlassScaffold(
-      title: 'TV Bağlanmıyor',
+      title: 'التلفزيون غير متصل',
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: const [
@@ -704,7 +704,7 @@ class TvHelpPage extends StatelessWidget {
   }
 }
 
-/// Rehberdeki "TV uygulamasını kur" düğmesi: telefondan kurulum sihirbazını açar.
+/// Rehberdeki "تثبيت تطبيق التلفزيون" düğmesi: telefondan kurulum sihirbazını açar.
 class InstallTvButton extends StatelessWidget {
   const InstallTvButton({super.key});
 
@@ -713,7 +713,7 @@ class InstallTvButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: GlowButton(
           icon: CupertinoIcons.tv_fill,
-          label: 'TV uygulamasını kur',
+          label: 'تثبيت تطبيق التلفزيون',
           onPressed: () => Navigator.of(context).push(appleRoute<void>((_) => const TvInstallPage())),
         ),
       );

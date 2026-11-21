@@ -28,15 +28,15 @@ class SettingsTab extends StatefulWidget {
 
 class _SettingsTabState extends State<SettingsTab> {
   static const languages = {
-    'tr': 'Türkçe',
-    'en': 'İngilizce',
+    'tr': 'تركي',
+    'en': 'إنجليزي',
     'de': 'Almanca',
-    'fr': 'Fransızca',
-    'es': 'İspanyolca',
-    'it': 'İtalyanca',
+    'fr': 'فرنسي',
+    'es': 'الأسبانية',
+    'it': 'ايطالي',
     'pt': 'Portekizce',
-    'ru': 'Rusça',
-    'ar': 'Arapça',
+    'ru': 'الروسية',
+    'ar': 'عربي',
     'ja': 'Japonca',
   };
 
@@ -54,13 +54,13 @@ class _SettingsTabState extends State<SettingsTab> {
   };
 
   static const placements = {
-    'cover': 'Oyunun altyazısını örterek',
-    'above': 'Oyunun altyazısının üstünde',
-    'below': 'Oyunun altyazısının altında',
+    'cover': 'تغطية ترجمات اللعبة',
+    'above': 'فوق العنوان الفرعي للعبة',
+    'below': 'أسفل العنوان الفرعي للعبة',
     'fixed': 'Ekranın altında sabit',
   };
 
-  static const edges = {'top': 'Üst', 'bottom': 'Alt', 'left': 'Sol', 'right': 'Sağ'};
+  static const edges = {'top': 'قمة', 'bottom': 'Alt', 'left': 'Sol', 'right': 'Sağ'};
   static const defaultRegion = {'top': 0.62, 'bottom': 0.97, 'left': 0.14, 'right': 0.86};
 
   AppSettings? settings;
@@ -152,7 +152,7 @@ class _SettingsTabState extends State<SettingsTab> {
 
   Future<void> sendTest() async {
     await Bridge.testSubtitle();
-    if (mounted) toast(context, 'Deneme altyazısı gönderildi.');
+    if (mounted) toast(context, 'تم إرسال العنوان الفرعي التجريبي.');
   }
 
   Future<void> confirmForget({required bool account}) async {
@@ -442,7 +442,7 @@ class _SettingsTabState extends State<SettingsTab> {
               iconColor: Tokens.gray,
               title: widget.setup.consoleName ?? 'PS5',
               subtitle: widget.setup.consoleHost ?? '',
-              trailing: const Pill(text: 'Eşleşti', color: Tokens.success),
+              trailing: const Pill(text: 'متطابق', color: Tokens.success),
             ),
             Cell(
               icon: CupertinoIcons.power,

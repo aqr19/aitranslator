@@ -4,14 +4,14 @@ import 'package:material_ui/material_ui.dart';
 import 'main.dart';
 import 'ui.dart';
 
-/// İlk açılıştaki tanıtım: uygulama ne yapar, nasıl çalışır, başlamadan önce ne gerekir.
-/// Ayarlar › Hakkında'dan yeniden açılabilir; o zaman [onDone] yalnızca sayfayı kapatır.
+/// التعريف الأولي عند التشغيل: ماذا يفعل التطبيق، كيف يعمل، وما المطلوب قبل البدء.
+/// يمكن فتحه مجدداً من الإعدادات › حول؛ وعندها يقوم [onDone] بإغلاق الصفحة فقط.
 class IntroPage extends StatefulWidget {
   const IntroPage({super.key, required this.onDone, this.replay = false});
 
   final Future<void> Function() onDone;
 
-  /// Kurulum bittikten sonra yeniden açıldıysa son düğme kuruluma değil geri götürür.
+  /// إذا أُعيد فتحه بعد اكتمال الإعداد، يرجع الزر الأخير للخلف بدلاً من الإعداد.
   final bool replay;
 
   @override
@@ -52,7 +52,13 @@ class _IntroPageState extends State<IntroPage> {
                 child: AnimatedOpacity(
                   opacity: last ? 0 : 1,
                   duration: const Duration(milliseconds: 200),
-                  child: TextButton(onPressed: last ? null : () => widget.onDone(), child: Text(widget.replay ? 'Kapat' : 'Geç', style: const TextStyle(color: Tokens.textSecondary, fontSize: 17, fontWeight: FontWeight.w500))),
+                  child: TextButton(
+                    onPressed: last ? null : () => widget.onDone(),
+                    child: Text(
+                      widget.replay ? 'إغلاق' : 'تخطي',
+                      style: const TextStyle(color: Tokens.textSecondary, fontSize: 17, fontWeight: FontWeight.w500),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -81,7 +87,10 @@ class _IntroPageState extends State<IntroPage> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
-              child: GlowButton(onPressed: next, label: last ? (widget.replay ? 'Tamam' : 'Kuruluma başla') : 'Devam'),
+              child: GlowButton(
+                onPressed: next,
+                label: last ? (widget.replay ? 'تم' : 'ابدأ الإعداد') : 'التالي',
+              ),
             ),
           ],
         ),
@@ -90,7 +99,7 @@ class _IntroPageState extends State<IntroPage> {
   }
 }
 
-/// Her tanıtım sayfasının iskeleti: üstte görsel, altta başlık ve açıklama.
+/// هيكل كل صفحة تعريفية: صورة/عنصر بالأعلى، وعنوان ووصف بالأسفل.
 class _IntroLayout extends StatelessWidget {
   const _IntroLayout({required this.visual, required this.title, required this.body, this.extra});
 
@@ -147,13 +156,13 @@ class _WelcomePage extends StatelessWidget {
           const _SceneCard(),
         ],
       ),
-      title: 'Oyunu kendi dilinde oyna',
-      body: 'PS5\'teki oyunların altyazılarını anında Türkçeye çevirip TV\'de gösterir.',
+      title: 'العب بلغتك',
+      body: 'يترجم ترجمات ألعاب PS5 فوراً إلى العربية ويعرضها على التلفاز.',
     );
   }
 }
 
-/// Örnek oyun sahnesi: oyunun kendi altyazısı ve üstünde çevirisi, TV'de görüneceği gibi.
+/// مشهد لعبة تجريبي: الترجمة الأصلية وفوقها الترجمة العربية كما ستظهر على التلفاز.
 class _SceneCard extends StatelessWidget {
   const _SceneCard();
 
@@ -171,8 +180,13 @@ class _SceneCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Image.asset('assets/intro_scene.jpg', fit: BoxFit.cover, alignment: const Alignment(-0.5, 0), filterQuality: FilterQuality.medium),
-              // Altyazılar okunsun diye sahnenin altı koyulaşır.
+              Image.asset(
+                'assets/intro_scene.jpg',
+                fit: BoxFit.cover,
+                alignment: const Alignment(-0.5, 0),
+                filterQuality: FilterQuality.medium,
+              ),
+              // تعتيم أسفل المشهد لوضوح الترجمة.
               const DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -194,7 +208,10 @@ class _SceneCard extends StatelessWidget {
                       radius: 999,
                       tint: Colors.black,
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      child: const Text('We have to leave before sunrise.', style: TextStyle(color: Color(0xFFD5D9E0), fontSize: 13)),
+                      child: const Text(
+                        'We have to leave before sunrise.',
+                        style: TextStyle(color: Color(0xFFD5D9E0), fontSize: 13),
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Container(
@@ -208,7 +225,10 @@ class _SceneCard extends StatelessWidget {
                       ),
                       child: const FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: Text('Gün doğmadan ayrılmalıyız.', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                        child: Text(
+                          'يجب أن نغادر قبل شروق الشمس.',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                        ),
                       ),
                     ),
                   ],
@@ -232,15 +252,15 @@ class _HowPage extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: 8),
         child: FlowRow(
           nodes: [
-            FlowNode(icon: CupertinoIcons.gamecontroller_fill, label: 'PS5', detail: 'Görüntü', color: Tokens.textSecondary),
-            FlowNode(icon: CupertinoIcons.device_phone_portrait, label: 'Telefon', detail: 'Çevirir', color: Tokens.accent),
-            FlowNode(icon: CupertinoIcons.tv_fill, label: 'TV', detail: 'Gösterir', color: Tokens.success),
+            FlowNode(icon: CupertinoIcons.gamecontroller_fill, label: 'PS5', detail: 'الصورة', color: Tokens.textSecondary),
+            FlowNode(icon: CupertinoIcons.device_phone_portrait, label: 'الجوال', detail: 'يترجم', color: Tokens.accent),
+            FlowNode(icon: CupertinoIcons.tv_fill, label: 'التلفاز', detail: 'يعرض', color: Tokens.success),
           ],
         ),
       ),
-      title: 'Telefonun aradaki çevirmen',
-      body: 'Telefon oyun görüntüsünü PS5\'ten Remote Play ile alır, altyazıyı okuyup çevirir ve TV\'ye gönderir. '
-          'Kamera yok; ekranı kapatsan da çalışmaya devam eder.',
+      title: 'جوالك هو المترجم الوسيط',
+      body: 'يلتقط الجوال صورة اللعبة من PS5 عبر Remote Play، ويقرأ الترجمة ويترجمها ويرسلها للتلفاز. '
+          'بدون كاميرا، ويستمر بالعمل حتى لو أطفأت الشاشة.',
     );
   }
 }
@@ -252,24 +272,24 @@ class _NeedsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return const _IntroLayout(
       visual: SizedBox.shrink(),
-      title: 'Başlamadan önce',
-      body: 'Kurulum birkaç dakika sürer. Şunlar hazır olsun:',
+      title: 'قبل أن تبدأ',
+      body: 'يستغرق الإعداد بضع دقائق. جهّز التالي:',
       extra: Column(
         children: [
           _Need(
             icon: CupertinoIcons.person_2_fill,
-            title: 'PS5\'te ikinci bir kullanıcı',
-            text: 'Oyunu kendi hesabınla oynarsın; telefon ikinci hesapla bağlanır, böylece kumandan TV\'den kopmaz.',
+            title: 'مستخدم ثانٍ على PS5',
+            text: 'العب بحسابك الأساسي، ويرتبط الجوال بحساب ثانٍ حتى لا ينفصل يد التحكم عن التلفاز.',
           ),
           _Need(
             icon: CupertinoIcons.tv_fill,
-            title: 'TV\'de GameTranslator uygulaması',
-            text: 'Samsung, LG ve Android TV\'de çalışır. TV\'ye kurulum bilgisayardaki GameTranslator ile yapılır.',
+            title: 'تطبيق GameTranslator على التلفاز',
+            text: 'يعمل على Samsung وLG وAndroid TV، ويُثبّت عبر GameTranslator على الكمبيوتر.',
           ),
           _Need(
             icon: CupertinoIcons.wifi,
-            title: 'Aynı Wi-Fi ağı',
-            text: 'Telefon, PS5 ve TV aynı ev ağına bağlı olmalı.',
+            title: 'نفس شبكة Wi-Fi',
+            text: 'يجب أن يكون الجوال وPS5 والتلفاز على نفس الشبكة المنزلية.',
           ),
         ],
       ),
