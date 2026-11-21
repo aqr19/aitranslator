@@ -31,34 +31,6 @@
       demoBadge: 'تجريبي',
       demoHint: 'مثال: تظهر ترجمة اللعبة هنا باللغة العربية. اضغط رجوع للخروج.'
     },
-    tr: {
-      waiting: 'Bilgisayarınızda GameTranslator uygulamasını açın.',
-      waitingHint: 'Uygulama bu TV\'yi bulup altyazıları buraya gönderecek.',
-      panelTitle: 'GameTranslator',
-      hdmi: 'HDMI',
-      lastSubtitle: 'Son altyazı',
-      diagnostics: 'Tanı',
-      server: 'Uygulama',
-      connection: 'Bağlantı',
-      loading: '(yükleniyor)',
-      videoReady: '(görüntü geldi)',
-      playing: '(oynatılıyor)',
-      inputError: '(hata: giriş açılamadı)',
-      sourceError: '(hata: kaynak desteklenmiyor)',
-      auto: 'otomatik',
-      consoleNotFound: 'konsol bulunamadı',
-      noEventSource: 'Bu TV desteklenmiyor (EventSource yok)',
-      connecting: 'bağlanıyor…',
-      connected: 'bağlı',
-      reconnecting: 'bağlantı yok, yeniden deneniyor…',
-      none: '—',
-      keys: 'Tamam: bu panel · ◀▶: HDMI girişi (panel açıkken) · 1–4: HDMI girişi · 0: konsolu otomatik bul · ▲▼: altyazıyı yukarı/aşağı taşı · Kırmızı: test altyazısı · Mavi: demo · Yeşil: bu panel',
-      localTest: 'Test: bu yazı oyunun üstünde görünüyor mu?',
-      positionPreview: 'Altyazı burada görünecek',
-      demoButton: 'Demoyu izle',
-      demoBadge: 'DEMO',
-      demoHint: 'Örnek: oyunun İngilizce altyazısı Türkçe olarak burada görünür. Çıkmak için Geri.'
-    },
     en: {
       waiting: 'Open the GameTranslator app on your computer.',
       waitingHint: 'The app will find this TV and send subtitles here.',
@@ -89,8 +61,7 @@
     }
   };
 
-  var navLang = (navigator.language || 'en').toLowerCase();
-  var lang = navLang.indexOf('ar') === 0 ? 'ar' : (navLang.indexOf('tr') === 0 ? 'tr' : 'en');
+  var lang = 'ar';
 
   if (document && document.documentElement) {
     document.documentElement.lang = lang;

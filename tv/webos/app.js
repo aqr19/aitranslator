@@ -181,7 +181,7 @@
     currentBox = validBox(box);
     setSubtitleText($('subtitle-text'), text, paragraphs);
     $('subtitle-text').style.whiteSpace = paragraphs ? 'pre-line' : '';
-    $('subtitle-text').style.textAlign = paragraphs ? 'left' : '';
+    $('subtitle-text').style.textAlign = paragraphs ? 'right' : '';
     $('subtitle').className = '';
     layout();
     setStatus('st-last', text.length > 40 ? text.slice(0, 40) + '…' : text);
@@ -194,7 +194,7 @@
 
   // Konuşmacı adları ("MARKOS: …", cümle ortasında başlayan ikinci konuşmacı dahil) ayarlarda açıksa ayrı renkte
   // yazılır. Ad büyük harfle başlayan en çok üç sözcüktür ve satır başında ya da bir cümlenin bitiminde durur.
-  var SPEAKER = /(^|[.!?…”"]\s+|\n)([A-ZÇĞİÖŞÜÂÎÛ][^\s:.!?]*(?: [A-ZÇĞİÖŞÜÂÎÛ][^\s:.!?]*){0,2}):(?=\s)/g;
+  var SPEAKER = /(^|[.!?…”"]\s+|\n)([A-Z\u0621-\u064A][^\s:.!?]*(?: [A-Z\u0621-\u064A][^\s:.!?]*){0,2}):(?=\s)/g;
   function setSubtitleText(el, text, paragraphs) {
     if (!speakerColor || paragraphs) {
       el.textContent = text;
@@ -739,11 +739,11 @@
   // Mağaza incelemesi ve ilk kez açanlar için: PS5 ve bilgisayar olmadan örnek altyazılar gösterilir.
 
   var DEMO_LINES = [
-    'Buraya ayıracak vaktimiz yok.',
-    'MİRA: Kapı daha fazla dayanmayacak!',
-    'Yakın dur. İlerideki yol tehlikeli.',
-    'Bekle! Sen de kimsin?',
-    'Bu iş henüz bitmedi.'
+    'ليس لدينا وقت نضيعه هنا.',
+    'ميرا: الباب لن يصمد أكثر من ذلك!',
+    'ابقَ قريباً. الطريق أمامنا خطير.',
+    'انتظر! من أنت؟',
+    'هذا الأمر لم ينتهِ بعد.'
   ];
   var DEMO_LINE_MS = 3200;
   var DEMO_GAP_MS = 700;
