@@ -12,14 +12,14 @@ import 'main.dart';
 import 'tv_install_page.dart';
 import 'ui.dart';
 
-/// Ayarlar sekmesi, iOS ayarları düzeninde: çeviri, altyazı bölgesi, TV'deki görünüm, PS5 ve hakkında.
+/// Settings tab, laid out like iOS Settings: translation, subtitle region, TV appearance, PS5, and about.
 class SettingsTab extends StatefulWidget {
   const SettingsTab({super.key, required this.setup, required this.onSetupChanged, required this.active});
 
   final SetupInfo setup;
   final Future<void> Function() onSetupChanged;
 
-  /// Sekme ekranda mı? Arkadayken oyun görüntüsü istenmez.
+  /// Whether the tab is visible; game snapshots are not requested in the background.
   final bool active;
 
   @override
@@ -28,20 +28,19 @@ class SettingsTab extends StatefulWidget {
 
 class _SettingsTabState extends State<SettingsTab> {
   static const languages = {
-    'tr': 'تركي',
-    'en': 'إنجليزي',
-    'de': 'Almanca',
-    'fr': 'فرنسي',
-    'es': 'الأسبانية',
-    'it': 'ايطالي',
-    'pt': 'Portekizce',
+    'ar': 'العربية',
+    'en': 'الإنجليزية',
+    'de': 'الألمانية',
+    'fr': 'الفرنسية',
+    'es': 'الإسبانية',
+    'it': 'الإيطالية',
+    'pt': 'البرتغالية',
     'ru': 'الروسية',
-    'ar': 'عربي',
-    'ja': 'Japonca',
+    'ja': 'اليابانية',
   };
 
   static const flags = {
-    'tr': '🇹🇷',
+    'ar': '🇸🇦',
     'en': '🇬🇧',
     'de': '🇩🇪',
     'fr': '🇫🇷',
@@ -49,18 +48,17 @@ class _SettingsTabState extends State<SettingsTab> {
     'it': '🇮🇹',
     'pt': '🇵🇹',
     'ru': '🇷🇺',
-    'ar': '🇸🇦',
     'ja': '🇯🇵',
   };
 
   static const placements = {
-    'cover': 'تغطية ترجمات اللعبة',
-    'above': 'فوق العنوان الفرعي للعبة',
-    'below': 'أسفل العنوان الفرعي للعبة',
-    'fixed': 'Ekranın altında sabit',
+    'cover': 'تغطية ترجمة اللعبة',
+    'above': 'فوق ترجمة اللعبة',
+    'below': 'أسفل ترجمة اللعبة',
+    'fixed': 'ثابت أسفل الشاشة',
   };
 
-  static const edges = {'top': 'قمة', 'bottom': 'Alt', 'left': 'Sol', 'right': 'Sağ'};
+  static const edges = {'top': 'أعلى', 'bottom': 'أسفل', 'left': 'يسار', 'right': 'يمين'};
   static const defaultRegion = {'top': 0.62, 'bottom': 0.97, 'left': 0.14, 'right': 0.86};
 
   AppSettings? settings;
@@ -69,14 +67,14 @@ class _SettingsTabState extends State<SettingsTab> {
   Timer? saveTimer;
   Timer? previewTimer;
 
-  /// Altyazı bölgesinde sürgünün ayarladığı kenar.
+  /// Active edge controlled by the slider in the subtitle region editor.
   String edge = 'top';
 
   @override
   void initState() {
     super.initState();
     load();
-    // Bölge ayarlanırken oyun görüntüsü güncel kalsın.
+    // Keep the game frame preview updated while adjusting the region.
     previewTimer = Timer.periodic(const Duration(seconds: 2), (_) => refreshPreview());
   }
 
@@ -107,7 +105,7 @@ class _SettingsTabState extends State<SettingsTab> {
     if (mounted && image != null) setState(() => preview = image);
   }
 
-  /// Değişiklik hemen ekrana yansır; kaydetme sürgü sürüklenirken her adımda değil, kısa bir aradan sonra yapılır.
+  /// Applies changes immediately in UI and debounces persistence while dragging sliders.
   void change(void Function(AppSettings) edit) {
     final current = settings;
     if (current == null) return;
@@ -119,7 +117,7 @@ class _SettingsTabState extends State<SettingsTab> {
   void setRegion(String edge, double value) => change((s) {
         final region = s.region;
         region[edge] = value;
-        // Bölge en az %5 yüksekliğinde ve genişliğinde kalır.
+        // Ensure region keeps at least 5% height and width.
         if (edge == 'top' && region['bottom'] < value + 0.05) region['bottom'] = (value + 0.05).clamp(0.0, 1.0);
         if (edge == 'bottom' && region['top'] > value - 0.05) region['top'] = (value - 0.05).clamp(0.0, 1.0);
         if (edge == 'left' && region['right'] < value + 0.05) region['right'] = (value + 0.05).clamp(0.0, 1.0);
@@ -139,7 +137,7 @@ class _SettingsTabState extends State<SettingsTab> {
   }
 
   Future<void> pickPlacement() async {
-    final picked = await showApplePicker(context, title: 'Altyazının yeri', options: placements, selected: settings?.style['placement'] as String?);
+    final picked = await showApplePicker(context, title: 'موضع الترجمة', options: placements, selected: settings?.style['placement'] as String?);
     if (picked != null) setStyle('placement', picked);
   }
 
@@ -152,17 +150,17 @@ class _SettingsTabState extends State<SettingsTab> {
 
   Future<void> sendTest() async {
     await Bridge.testSubtitle();
-    if (mounted) toast(context, 'تم إرسال العنوان الفرعي التجريبي.');
+    if (mounted) toast(context, 'تم إرسال الترجمة التجريبية.');
   }
 
   Future<void> confirmForget({required bool account}) async {
     final confirmed = await confirmApple(
       context,
-      title: account ? 'PSN hesabı değiştirilsin mi?' : 'PS5 yeniden eşleştirilsin mi?',
+      title: account ? 'تغيير حساب PSN؟' : 'إعادة ربط جهاز PS5؟',
       message: account
-          ? 'Kayıtlı hesap ve PS5 eşleştirmesi silinir; kurulumu baştan yaparsın.'
-          : 'Kayıtlı eşleştirme silinir; PS5\'teki "Cihaz Eşleştir" koduyla yeniden eşleştirirsin.',
-      action: 'Sil ve Devam Et',
+          ? 'سيتم حذف الحساب المحفوظ وربط PS5؛ وستحتاج لإعادة الإعداد من البداية.'
+          : 'سيتم حذف الربط الحالي؛ ويمكنك إعادة الربط باستخدام رمز "إقران الجهاز" في PS5.',
+      action: 'حذف ومتابعة',
       destructive: true,
     );
     if (!confirmed) return;
@@ -182,7 +180,7 @@ class _SettingsTabState extends State<SettingsTab> {
   Future<void> showLogs() async {
     final lines = await Bridge.logs();
     if (!mounted) return;
-    final text = lines.isEmpty ? 'Henüz kayıt yok.' : lines.reversed.join('\n');
+    final text = lines.isEmpty ? 'لا توجد سجلات بعد.' : lines.reversed.join('\n');
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -195,18 +193,18 @@ class _SettingsTabState extends State<SettingsTab> {
           children: [
             Row(
               children: [
-                const Expanded(child: Text('Günlük', style: Txt.title2)),
+                const Expanded(child: Text('السجل', style: Txt.title2)),
                 TextButton(
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: text));
                     Navigator.of(sheet).pop();
-                    toast(context, 'Günlük kopyalandı.');
+                    toast(context, 'تم نسخ السجل.');
                   },
-                  child: const Text('Kopyala'),
+                  child: const Text('نسخ'),
                 ),
               ],
             ),
-            Text('Bir sorun olduğunda destek için bu kayıtları paylaşabilirsin.', style: Txt.footnote.copyWith(color: Tokens.textSecondary)),
+            Text('يمكنك مشاركة هذه السجلات للمساعدة في حل المشاكل.', style: Txt.footnote.copyWith(color: Tokens.textSecondary)),
             const SizedBox(height: 12),
             SelectableText(text, style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: Tokens.textSecondary, height: 1.45)),
           ],
@@ -217,9 +215,9 @@ class _SettingsTabState extends State<SettingsTab> {
 
   String get glossarySummary {
     final (terms, keep, problem) = GlossaryPage.inspect(settings?.glossary ?? '');
-    if (problem != null) return 'Hatalı';
-    if (terms + keep == 0) return 'Boş';
-    return '${terms + keep} terim';
+    if (problem != null) return 'خطأ';
+    if (terms + keep == 0) return 'فارغ';
+    return '${terms + keep} مصطلح';
   }
 
   @override
@@ -228,44 +226,44 @@ class _SettingsTabState extends State<SettingsTab> {
     if (s == null) return const Center(child: CupertinoActivityIndicator(radius: 14));
     final style = s.style;
     return LargeTitleList(
-      title: 'Ayarlar',
+      title: 'الإعدادات',
       children: [
-        // ---------------------------------------------------------------- Çeviri
-        const GroupHeader('ÇEVİRİ'),
+        // ---------------------------------------------------------------- Translation
+        const GroupHeader('الترجمة'),
         Group(
           inset: 60,
           children: [
             Cell(
               icon: CupertinoIcons.gamecontroller_fill,
               iconColor: Tokens.indigo,
-              title: 'Oyunun dili',
+              title: 'لغة اللعبة',
               value: '${flags[s.sourceLanguage] ?? ''} ${languages[s.sourceLanguage] ?? s.sourceLanguage}',
               chevron: true,
-              onTap: () => pickLanguage('sourceLanguage', 'Oyunun dili'),
+              onTap: () => pickLanguage('sourceLanguage', 'لغة اللعبة'),
             ),
             Cell(
               icon: CupertinoIcons.globe,
               iconColor: Tokens.accent,
-              title: 'Çeviri dili',
+              title: 'لغة الترجمة',
               value: '${flags[s.targetLanguage] ?? ''} ${languages[s.targetLanguage] ?? s.targetLanguage}',
               chevron: true,
-              onTap: () => pickLanguage('targetLanguage', 'Çeviri dili'),
+              onTap: () => pickLanguage('targetLanguage', 'لغة الترجمة'),
             ),
-            if (s.sourceLanguage == 'en' && s.targetLanguage == 'tr')
+            if (s.sourceLanguage == 'en' && s.targetLanguage == 'ar')
               Cell(
                 icon: CupertinoIcons.book_fill,
                 iconColor: Tokens.warning,
-                title: 'Terim sözlüğü',
+                title: 'قاموس المصطلحات',
                 value: glossarySummary,
                 chevron: true,
                 onTap: editGlossary,
               ),
-            if (s.sourceLanguage == 'en' && s.targetLanguage == 'tr')
+            if (s.sourceLanguage == 'en' && s.targetLanguage == 'ar')
               Cell(
                 icon: CupertinoIcons.cube_box_fill,
                 iconColor: Tokens.success,
-                title: 'Oyun paketleri',
-                subtitle: 'GTA V, RDR2, Elden Ring… satırları hazır Türkçesiyle',
+                title: 'حزم الألعاب',
+                subtitle: 'ترجمة جاهزة لألعاب مثل GTA V و RDR2 و Elden Ring',
                 trailing: CupertinoSwitch(
                   value: s.packsEnabled,
                   activeTrackColor: Tokens.success,
@@ -274,21 +272,21 @@ class _SettingsTabState extends State<SettingsTab> {
               ),
           ],
         ),
-        if (s.sourceLanguage == 'en' && s.targetLanguage == 'tr')
-          const GroupFooter('Oyunun paketinde bulunan satır çeviri motoruna gitmeden paketteki Türkçesiyle gösterilir. '
-              'Paketler CouchSubs topluluğundan gelir ve haftada bir yenilenir.'),
-        const GroupHeader('ÇEVİRİ MOTORU'),
+        if (s.sourceLanguage == 'en' && s.targetLanguage == 'ar')
+          const GroupFooter('الأسطر الموجودة في حزمة اللعبة تُعرض مباشرة دون استهلاك محرك الترجمة. '
+              'يتم تحديث الحزم أسبوعياً.'),
+        const GroupHeader('محرك الترجمة'),
         Group(
           children: [
             Cell(
               title: 'Google',
-              subtitle: 'İnternet ister, anahtar gerekmez. Çoğu oyun için önerilir.',
+              subtitle: 'يتطلب اتصالاً بالإنترنت ولا يحتاج مفتاح API. موصى به لمعظم الألعاب.',
               checked: s.engine == 'google',
               onTap: () => change((s) => s.json['engine'] = 'google'),
             ),
             Cell(
               title: 'DeepL',
-              subtitle: 'Daha doğal cümleler; kendi DeepL API anahtarınla çalışır.',
+              subtitle: 'صياغة أكثر طبيعية؛ يعمل بمفتاح DeepL API الخاص بك.',
               checked: s.engine == 'deepl',
               onTap: () => change((s) => s.json['engine'] = 'deepl'),
             ),
@@ -298,22 +296,22 @@ class _SettingsTabState extends State<SettingsTab> {
                 child: TextField(
                   controller: deepLController,
                   autocorrect: false,
-                  decoration: const InputDecoration(hintText: 'DeepL API anahtarı'),
+                  decoration: const InputDecoration(hintText: 'مفتاح DeepL API'),
                   onChanged: (value) => change((s) => s.json['deepLKey'] = value.trim()),
                 ),
               ),
             Cell(
-              title: 'Cihazda',
-              subtitle: 'İnternetsiz çalışır; kalitesi daha düşüktür. Dil modeli bir kez iner.',
+              title: 'على الجهاز (بدون إنترنت)',
+              subtitle: 'يعمل دون إنترنت بدقة أقل. يتم تحميل نموذج اللغة مرة واحدة.',
               checked: s.engine == 'mlkit',
               onTap: () => change((s) => s.json['engine'] = 'mlkit'),
             ),
           ],
         ),
-        const GroupFooter('İnternet koparsa çeviri kendiliğinden cihazdaki modele geçer. DeepL anahtarı boşsa ya da çalışmazsa Google kullanılır.'),
+        const GroupFooter('عند انقطاع الإنترنت تنتقل الترجمة تلقائياً إلى النموذج المحلي. إذا كان مفتاح DeepL فارغاً أو معطلاً يُستخدم Google.'),
 
-        // ---------------------------------------------------------------- Altyazı bölgesi
-        const GroupHeader('ALTYAZI BÖLGESİ'),
+        // ---------------------------------------------------------------- Subtitle region
+        const GroupHeader('منطقة الترجمة'),
         Glass(
           clip: true,
           child: Column(
@@ -355,34 +353,34 @@ class _SettingsTabState extends State<SettingsTab> {
                 ),
               ),
               const Divider(),
-              Cell(title: 'Varsayılana Dön', titleColor: Tokens.accent, onTap: () => change((s) => s.json['region'] = Map<String, dynamic>.from(defaultRegion))),
+              Cell(title: 'استعادة الافتراضي', titleColor: Tokens.accent, onTap: () => change((s) => s.json['region'] = Map<String, dynamic>.from(defaultRegion))),
             ],
           ),
         ),
-        const GroupFooter('Mavi çerçeveyi oyunun altyazısının çıktığı yere getir. Çerçeve dar olursa cümlenin başı ya da sonu kesilir.'),
+        const GroupFooter('حرّك الإطار الأزرق فوق مكان ظهور الترجمة في اللعبة. إذا كان الإطار ضيقاً قد تُقتطع بداية الجملة أو نهايتها.'),
 
-        // ---------------------------------------------------------------- TV'de görünüm
-        const GroupHeader('TV\'DE GÖRÜNÜM'),
+        // ---------------------------------------------------------------- TV appearance
+        const GroupHeader('المظهر على التلفاز'),
         Group(
           children: [
             _ControlRow(
-              title: 'Yazı boyutu',
+              title: 'حجم الخط',
               child: _Segmented(
                 value: '${style['fontSize']}',
-                items: const {'36': 'Küçük', '46': 'Orta', '58': 'Büyük', '72': 'Dev'},
+                items: const {'36': 'صغير', '46': 'متوسط', '58': 'كبير', '72': 'ضخم'},
                 onChanged: (value) => setStyle('fontSize', int.parse(value)),
               ),
             ),
             _ControlRow(
-              title: 'Yazı rengi',
+              title: 'لون الخط',
               child: _Segmented(
                 value: style['textColor'] as String,
-                items: const {'white': 'Beyaz', 'yellow': 'Sarı'},
+                items: const {'white': 'أبيض', 'yellow': 'أصفر'},
                 onChanged: (value) => setStyle('textColor', value),
               ),
             ),
             Cell(
-              title: 'Altyazının yeri',
+              title: 'موضع الترجمة',
               subtitle: placements[style['placement']] ?? '',
               chevron: true,
               onTap: pickPlacement,
@@ -394,7 +392,7 @@ class _SettingsTabState extends State<SettingsTab> {
                 children: [
                   Row(
                     children: [
-                      const Expanded(child: Text('Zemin koyuluğu', style: Txt.body)),
+                      const Expanded(child: Text('تعتيم الخلفية', style: Txt.body)),
                       Text('%${style['background']}', style: Txt.body.copyWith(color: Tokens.textSecondary)),
                     ],
                   ),
@@ -409,23 +407,23 @@ class _SettingsTabState extends State<SettingsTab> {
               ),
             ),
             Cell(
-              title: 'Kalın yazı',
+              title: 'خط عريض',
               trailing: CupertinoSwitch(value: style['bold'] as bool, activeTrackColor: Tokens.success, onChanged: (value) => setStyle('bold', value)),
             ),
-            Cell(title: 'TV\'ye Deneme Altyazısı Gönder', titleColor: Tokens.accent, onTap: sendTest),
+            Cell(title: 'إرسال ترجمة تجريبية للتلفاز', titleColor: Tokens.accent, onTap: sendTest),
           ],
         ),
 
-        // ---------------------------------------------------------------- TV uygulaması
-        const GroupHeader('TV UYGULAMASI'),
+        // ---------------------------------------------------------------- TV app
+        const GroupHeader('تطبيق التلفاز'),
         Group(
           inset: 60,
           children: [
             Cell(
               icon: CupertinoIcons.tv_fill,
               iconColor: Tokens.purple,
-              title: 'TV Uygulamasını Kur',
-              subtitle: 'LG ve Android TV\'ye telefondan; güncellemek için de',
+              title: 'تثبيت تطبيق التلفاز',
+              subtitle: 'التثبيت أو التحديث على Android TV و LG من الهاتف',
               chevron: true,
               onTap: () => Navigator.of(context).push(appleRoute<void>((_) => const TvInstallPage())),
             ),
@@ -447,7 +445,7 @@ class _SettingsTabState extends State<SettingsTab> {
             Cell(
               icon: CupertinoIcons.power,
               iconColor: Tokens.success,
-              title: 'Dinlenme modundan uyandır',
+              title: 'إيقاظ من وضع السكون',
               trailing: CupertinoSwitch(
                 value: s.autoWake,
                 activeTrackColor: Tokens.success,
@@ -456,40 +454,40 @@ class _SettingsTabState extends State<SettingsTab> {
             ),
           ],
         ),
-        const GroupFooter('Çeviri başlarken PS5 dinlenme modundaysa açılır.'),
+        const GroupFooter('يتم تشغيل PS5 تلقائياً عند بدء الترجمة إذا كان في وضع السكون.'),
         const SizedBox(height: 14),
         Group(
           children: [
-            Cell(title: 'PS5\'i Yeniden Eşleştir', titleColor: Tokens.accent, onTap: () => confirmForget(account: false)),
-            Cell(title: 'PSN Hesabını Değiştir', titleColor: Tokens.danger, onTap: () => confirmForget(account: true)),
+            Cell(title: 'إعادة ربط PS5', titleColor: Tokens.accent, onTap: () => confirmForget(account: false)),
+            Cell(title: 'تغيير حساب PSN', titleColor: Tokens.danger, onTap: () => confirmForget(account: true)),
           ],
         ),
 
-        // ---------------------------------------------------------------- Hakkında
-        const GroupHeader('HAKKINDA'),
+        // ---------------------------------------------------------------- About
+        const GroupHeader('حول التطبيق'),
         Group(
           inset: 60,
           children: [
-            Cell(icon: CupertinoIcons.play_circle_fill, iconColor: Tokens.purple, title: 'Tanıtımı Göster', chevron: true, onTap: showIntro),
-            Cell(icon: CupertinoIcons.doc_text_fill, iconColor: Tokens.gray, title: 'Günlük', chevron: true, onTap: showLogs),
+            Cell(icon: CupertinoIcons.play_circle_fill, iconColor: Tokens.purple, title: 'عرض المقدمة', chevron: true, onTap: showIntro),
+            Cell(icon: CupertinoIcons.doc_text_fill, iconColor: Tokens.gray, title: 'السجل', chevron: true, onTap: showLogs),
             Cell(
               icon: CupertinoIcons.info,
               iconColor: Tokens.accent,
-              title: 'Sürüm',
+              title: 'الإصدار',
               value: widget.setup.version.isEmpty ? '—' : widget.setup.version,
             ),
           ],
         ),
         const GroupFooter(
-          'Oyun görüntüsü ve hesap bilgilerin telefonda kalır. Çevrimiçi motor seçiliyse yalnızca okunan altyazı metni çeviri '
-          'servisine gönderilir.\n\nGameTranslator açık kaynaklıdır (AGPL-3.0). Sony ya da PlayStation ile bağlantılı değildir.',
+          'تبقى صورة اللعبة وبيانات حسابك على هاتفك. عند اختيار محرك ترجمة عبر الإنترنت يتم إرسال نص الترجمة المقروء فقط '
+          'إلى خدمة الترجمة.\n\nGameTranslator مفتوح المصدر (AGPL-3.0). غير تابع لشركة Sony أو PlayStation.',
         ),
       ],
     );
   }
 }
 
-/// Başlığı üstte, denetimi altında olan satır (parçalı seçiciler için).
+/// Row with title above and control below (for segmented controls).
 class _ControlRow extends StatelessWidget {
   const _ControlRow({required this.title, required this.child});
 
@@ -508,7 +506,7 @@ class _ControlRow extends StatelessWidget {
   }
 }
 
-/// iOS'un kayan parçalı seçicisi.
+/// Sliding segmented control.
 class _Segmented extends StatelessWidget {
   const _Segmented({required this.value, required this.items, required this.onChanged});
 
@@ -536,7 +534,7 @@ class _Segmented extends StatelessWidget {
   }
 }
 
-/// Çeviri kapalıyken oyun görüntüsü yoktur; bölge boş bir ekran üstünde gösterilir.
+/// Placeholder shown when translation is stopped and no game frame is available.
 class _RegionPlaceholder extends StatelessWidget {
   const _RegionPlaceholder({required this.settings});
 
@@ -554,7 +552,7 @@ class _RegionPlaceholder extends StatelessWidget {
               left: 0,
               right: 0,
               top: 18,
-              child: Text('Çeviri açıkken burada oyun görüntüsü görünür.', textAlign: TextAlign.center, style: Txt.footnote.copyWith(color: Tokens.textSecondary)),
+              child: Text('تظهر صورة اللعبة هنا عند تشغيل الترجمة.', textAlign: TextAlign.center, style: Txt.footnote.copyWith(color: Tokens.textSecondary)),
             ),
             Positioned(
               left: settings.regionValue('left') * constraints.maxWidth,
@@ -576,25 +574,25 @@ class _RegionPlaceholder extends StatelessWidget {
   }
 }
 
-/// Terim sözlüğü düzenleyicisi: bilgisayardaki sözlük dosyalarıyla aynı JSON biçimi.
+/// Glossary editor using the same JSON structure as the desktop dictionary files.
 class GlossaryPage extends StatefulWidget {
   const GlossaryPage({super.key, required this.initial});
 
   final String initial;
 
-  static const example = '{\n  "terms": {\n    "Leviathan Axe": "Leviathan Baltası"\n  },\n  "keep": ["Kratos", "Atreus"]\n}';
+  static const example = '{\n  "terms": {\n    "Leviathan Axe": "فأس ليفياثان"\n  },\n  "keep": ["Kratos", "Atreus"]\n}';
 
-  /// Sözlük metnindeki terim ve korunan ad sayısı; okunamıyorsa üçüncü değer sorunu söyler.
+  /// Returns term count, kept name count, and an error message if invalid.
   static (int, int, String?) inspect(String text) {
     if (text.trim().isEmpty) return (0, 0, null);
     try {
       final root = jsonDecode(text);
-      if (root is! Map) return (0, 0, 'Sözlük { ... } biçiminde olmalı.');
+      if (root is! Map) return (0, 0, 'يجب أن يكون القاموس بصيغة { ... }.');
       final terms = root['terms'] is Map ? (root['terms'] as Map).values.whereType<String>().length : 0;
       final keep = root['keep'] is List ? (root['keep'] as List).whereType<String>().length : 0;
       return (terms, keep, null);
     } on FormatException {
-      return (0, 0, 'Yazım hatası var: tırnak, virgül ve parantezleri kontrol et.');
+      return (0, 0, 'خطأ في الصياغة: تأكد من علامات التنصيص والفواصل والأقواس.');
     }
   }
 
@@ -616,11 +614,11 @@ class _GlossaryPageState extends State<GlossaryPage> {
     final (terms, keep, problem) = GlossaryPage.inspect(controller.text);
     final empty = controller.text.trim().isEmpty;
     return GlassScaffold(
-      title: 'Terim Sözlüğü',
+      title: 'قاموس المصطلحات',
       actions: [
         TextButton(
           onPressed: problem == null ? () => Navigator.of(context).pop(controller.text.trim()) : null,
-          child: const Text('Kaydet', style: TextStyle(fontWeight: FontWeight.w600)),
+          child: const Text('حفظ', style: TextStyle(fontWeight: FontWeight.w600)),
         ),
       ],
       body: ListView(
@@ -629,8 +627,8 @@ class _GlossaryPageState extends State<GlossaryPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
-              'Çevirinin yanlış çevirdiği özel adları ve oyun terimlerini burada sabitleyebilirsin. '
-              '"terms" içindeki terimler yazdığın Türkçeyle çevrilir, "keep" içindeki adlar olduğu gibi kalır.',
+              'يمكنك تثبيت ترجمة الأسماء الخاصة ومصطلحات الألعاب هنا. '
+              'المصطلحات داخل "terms" تُترجم كما تكتبها، والأسماء داخل "keep" تبقى كما هي.',
               style: Txt.subhead.copyWith(color: Tokens.textSecondary),
             ),
           ),
@@ -656,18 +654,18 @@ class _GlossaryPageState extends State<GlossaryPage> {
           else if (empty)
             Notice(
               icon: CupertinoIcons.wand_stars,
-              text: 'Sözlük boş. Bir örnekle başlayıp kendi terimlerinle değiştirebilirsin.',
+              text: 'القاموس فارغ. يمكنك البدء بمثال وتعديله بمصطلحاتك.',
               action: TextButton(
                 style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32)),
                 onPressed: () => setState(() => controller.text = GlossaryPage.example),
-                child: const Text('Örnek Ekle'),
+                child: const Text('إضافة مثال'),
               ),
             )
           else
-            Notice(icon: CupertinoIcons.checkmark_circle_fill, color: Tokens.success, text: '$terms terim, $keep korunan ad okundu.'),
+            Notice(icon: CupertinoIcons.checkmark_circle_fill, color: Tokens.success, text: 'تمت قراءة $terms مصطلح و $keep اسم محفوظ.'),
           const GroupFooter(
-            'Bilgisayardaki GameTranslator sözlük dosyalarıyla aynı biçimdir; oradaki dosyanın içeriğini buraya yapıştırabilirsin. '
-            'Yalnızca İngilizce → Türkçe çeviride kullanılır.',
+            'يطابق صيغة ملفات القاموس في نسخة الحاسوب؛ يمكنك لصق محتواها هنا. '
+            'يُستخدم في الترجمة من الإنجليزية إلى العربية.',
           ),
         ],
       ),

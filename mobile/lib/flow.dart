@@ -4,19 +4,19 @@ import 'package:material_ui/material_ui.dart';
 import 'main.dart';
 import 'ui.dart';
 
-/// Görüntünün izlediği yol: PS5 → telefon → TV. Her cihaz, Denetim Merkezi'ndeki kutular gibi cam bir karodur.
-/// Tanıtımda ve ana ekranda kullanılır.
+/// Video/subtitle flow path: PS5 -> phone -> TV, rendered as glass tiles.
+/// Used in the intro and home screens.
 class FlowNode {
   const FlowNode({required this.icon, required this.label, this.detail, this.color = Tokens.textSecondary, this.busy = false});
 
   final IconData icon;
   final String label;
 
-  /// Karonun altındaki durum yazısı; rengi ve yanındaki nokta [color] ile boyanır.
+  /// Status label below the tile, colored with [color] alongside the indicator dot.
   final String? detail;
   final Color color;
 
-  /// Bağlanıyor: nokta yerine küçük bir dönen gösterge.
+  /// Shows a compact spinner instead of a dot while connecting.
   final bool busy;
 }
 

@@ -21,31 +21,30 @@ void main() {
   runApp(const GameTranslatorApp());
 }
 
-/// Apple'ın tasarım dili (iOS, koyu görünüm, Liquid Glass): sistem renkleri, cam yüzeyler, büyük başlıklar.
-/// Renk değerleri iOS'un koyu görünümdeki sistem renkleridir.
+/// Dark glass design tokens: system colors, translucent surfaces, and typography scale.
 class Tokens {
-  /// Zeminin taban rengi; ışık lekeleri [GlassBackground] ile bunun üstüne çizilir.
+  /// Base background color; ambient glows are drawn over this in [GlassBackground].
   static const background = Color(0xFF05070D);
 
-  /// Cam yüzey: zemini gösteren yarı saydam beyaz. Kartlarda düz renk yerine [glassFill] kullanılır.
+  /// Translucent glass surfaces. Cards use [glassFill] gradient instead of flat colors.
   static const surface = Color(0x1AFFFFFF);
   static const surfaceHigh = Color(0x29FFFFFF);
 
-  /// Camın kenarı ve satır ayraçları (iOS'ta "separator").
+  /// Glass borders and row dividers.
   static const border = Color(0x2EFFFFFF);
   static const separator = Color(0x24FFFFFF);
 
-  /// Camın içine gömülü alanlar (metin kutuları, kaydırmalı seçiciler).
+  /// Recessed fields such as text inputs and segmented controls.
   static const inset = Color(0x33000000);
 
-  /// Açılır pencereler ve menüler: altındaki yazıyla karışmasın diye neredeyse opak koyu cam.
+  /// Popups and sheets: nearly opaque dark surface so underlying text does not bleed through.
   static const sheet = Color(0xF21C1C1E);
 
-  /// iOS "label" ve "secondaryLabel".
+  /// Primary and secondary text colors.
   static const textPrimary = Color(0xFFFFFFFF);
   static const textSecondary = Color(0x99EBEBF5);
 
-  /// iOS sistem renkleri (koyu görünüm).
+  /// Accent and semantic system colors.
   static const accent = Color(0xFF0A84FF);
   static const accentText = Color(0xFF0A84FF);
   static const accentSoft = Color(0x400A84FF);
@@ -58,7 +57,7 @@ class Tokens {
   static const teal = Color(0xFF40C8E0);
   static const gray = Color(0xFF8E8E93);
 
-  /// Cam kartların dolgusu: sol üstte ışık alan, sağ alta doğru saydamlaşan beyaz.
+  /// Glass card gradient: brighter top-left highlight fading toward bottom-right.
   static const glassFill = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -66,7 +65,7 @@ class Tokens {
   );
 }
 
-/// iOS yazı ölçeği (Dynamic Type "Large"). Yazı tipi Inter'dir: SF Pro'ya en yakın açık lisanslı yazı tipi.
+/// Typography scale using IBM Plex Sans Arabic.
 class Txt {
   static const largeTitle = TextStyle(fontSize: 34, fontWeight: FontWeight.w700, letterSpacing: -0.6, height: 1.15);
   static const title1 = TextStyle(fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: -0.5, height: 1.18);
@@ -107,7 +106,6 @@ class GameTranslatorApp extends StatelessWidget {
     return MaterialApp(
       title: 'GameTranslator',
       debugShowCheckedModeBanner: false,
-      // iOS'taki gibi esneyen kaydırma. Sayfalar appleRoute ile (sağdan kayarak) açılır.
       scrollBehavior: const _AppleScroll(),
       theme: ThemeData(
         colorScheme: scheme,
@@ -188,7 +186,7 @@ class GameTranslatorApp extends StatelessWidget {
   }
 }
 
-/// Her platformda iOS'un esneyen kaydırması; kenar parlaması (Android) gösterilmez.
+/// Bouncing scroll physics without Android edge glow.
 class _AppleScroll extends MaterialScrollBehavior {
   const _AppleScroll();
 
@@ -199,7 +197,7 @@ class _AppleScroll extends MaterialScrollBehavior {
   Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) => child;
 }
 
-/// İlk açılışta tanıtım, sonra kurulum (PSN girişi ve PS5 eşleştirmesi), hepsi tamamsa ana ekran.
+/// Shows intro on first launch, then setup (PSN sign-in and PS5 pairing), and finally the home screen.
 class RootPage extends StatefulWidget {
   const RootPage({super.key});
 
@@ -211,13 +209,13 @@ class _RootPageState extends State<RootPage> {
   SetupInfo? setup;
   late final AppLifecycleListener lifecycle;
 
-  /// Açılış animasyonu bitti mi? Kayıtlar daha erken okunsa da animasyon yarıda kesilmez.
+  /// Whether the splash delay has finished so the opening animation is not cut short.
   bool splashDone = false;
 
   @override
   void initState() {
     super.initState();
-    // Uygulamaya dönüldüğünde kayıtlar yeniden okunur (eşleştirme arka planda değişmiş olabilir).
+    // Reload setup state on app resume in case pairing changed in the background.
     lifecycle = AppLifecycleListener(onResume: reload);
     reload();
     Future<void>.delayed(SplashView.minimum, () {

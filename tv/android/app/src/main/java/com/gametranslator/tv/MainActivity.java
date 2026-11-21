@@ -30,7 +30,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * HDMI girişini TvView ile tam ekran gösterir; üstünde şeffaf WebView'de LG ve Samsung'la ortak arayüz çalışır.
+ * Displays the HDMI input full-screen via TvView with a transparent WebView overlay for the shared TV UI.
  */
 public class MainActivity extends Activity {
     private TvView tvView;
@@ -66,6 +66,7 @@ public class MainActivity extends Activity {
         webView = new WebView(this);
         webView.setBackgroundColor(Color.TRANSPARENT);
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+
         WebView.setWebContentsDebuggingEnabled(true);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -74,13 +75,14 @@ public class MainActivity extends Activity {
         settings.setAllowFileAccessFromFileURLs(true);
         settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        // Türkçe dublaj: bilgisayardan gelen ses kumandaya basılmadan çalabilsin.
+        // Allow audio playback without requiring a remote button gesture.
         settings.setMediaPlaybackRequiresUserGesture(false);
-        // Sayfanın 1920 piksellik viewport'u kullanılır ve ekrana sığdırılır (bkz. index.html); yoksa yazılar iki kat büyük.
+        // Lock text zoom to 100% so Android accessibility font scaling does not distort the 1920x1080 TV layout.
+        settings.setTextZoom(100);
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
         settings.setSupportZoom(false);
-        // Ölçek fiziksel piksel başına yüzde: 1920 CSS pikseli ekranın tam genişliğine sığar (1080p'de %100).
+        // Scale 1920 CSS pixels to fit the physical screen width (100% at 1080p, 200% at 4K).
         webView.setInitialScale(fitScalePercent());
         webView.addJavascriptInterface(new Bridge(), "AndroidTV");
         webView.setWebChromeClient(new android.webkit.WebChromeClient() {
@@ -97,6 +99,7 @@ public class MainActivity extends Activity {
             }
         });
         root.addView(webView);
+
         setContentView(root);
         webView.loadUrl("file:///android_asset/tv/index.html");
         webView.requestFocus();
@@ -112,12 +115,12 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** Sayfanın 1920 CSS piksellik genişliğini ekranın fiziksel genişliğine sığdıran WebView ölçeği (yüzde). */
+    /** WebView initial scale percentage to fit a 1920px CSS layout onto the physical screen width. */
     private int fitScalePercent() {
         DisplayMetrics metrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
         int width = Math.max(metrics.widthPixels, metrics.heightPixels);
-        return width > 0 ? Math.max(1, Math.round(width * 100f / 1920f)) : 0;
+        return width > 0 ? Math.max(1, Math.round(width * 100f / 1920f)) : 100;
     }
 
     private static String paramsOf(Intent intent) {
@@ -131,7 +134,7 @@ public class MainActivity extends Activity {
         return "";
     }
 
-    /** Geri ve renk tuşlarını sayfaya bildirir; diğerleri WebView'e kendiliğinden gider. */
+    /** Forward Back and color keys to the web UI; other keys pass through to WebView. */
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         int code = pageKey(event.getKeyCode());
@@ -169,7 +172,7 @@ public class MainActivity extends Activity {
         return "\"" + text.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 
-    /** TV'nin HDMI girişleri, kimliğe göre sıralı. Girişin numarası sıradaki yeridir. */
+    /** HDMI inputs sorted by ID; port number is 1-based index in this list. */
     private List<TvInputInfo> hdmiInputs() {
         List<TvInputInfo> inputs = new ArrayList<>();
         TvInputManager manager = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
@@ -198,7 +201,7 @@ public class MainActivity extends Activity {
             });
         }
 
-        /** Tek bağlı HDMI girişi varsa onun numarası, yoksa 0. */
+        /** Returns the 1-based port number if exactly one HDMI input is connected, otherwise 0. */
         @JavascriptInterface
         public int consolePort() {
             TvInputManager manager = (TvInputManager) getSystemService(TV_INPUT_SERVICE);

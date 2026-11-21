@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
-/// Çekirdeğin (Android tarafındaki Engine) arayüze bildirdiği durum.
+/// State reported to the UI by the core engine.
 class EngineState {
   const EngineState({
     this.phase = 'idle',
@@ -39,7 +39,7 @@ class EngineState {
   final int frameHeight;
   final int translated;
 
-  /// Oyun paketinden gösterilen satır sayısı ve paketin (oynanan oyunun) adı.
+  /// Number of lines served from a game pack and the active game pack name.
   final int packHits;
   final String packGame;
   final bool nativeAvailable;
@@ -64,7 +64,7 @@ class EngineState {
       );
 }
 
-/// Kayıtlı PSN hesabı ve eşleştirilmiş PS5.
+/// Saved PSN account and paired PS5 console.
 class SetupInfo {
   const SetupInfo({this.hasAccount = false, this.consoleHost, this.consoleName, this.introSeen = false, this.version = ''});
 
@@ -94,7 +94,7 @@ class RegisterResult {
   final String? detail;
 }
 
-/// Uygulama ayarları; Android tarafındaki Settings ile aynı alanlar (JSON olarak taşınır).
+/// Application settings mirroring Android Settings (serialized as JSON).
 class AppSettings {
   AppSettings(this.json);
 
@@ -115,7 +115,7 @@ class AppSettings {
   AppSettings copy() => AppSettings(jsonDecode(jsonEncode(json)) as Map<String, dynamic>);
 }
 
-/// Android tarafındaki "gt/bridge" ve "gt/events" kanalları.
+/// Platform channels "gt/bridge" and "gt/events".
 class Bridge {
   static const _channel = MethodChannel('gt/bridge');
   static const _events = EventChannel('gt/events');
@@ -142,7 +142,7 @@ class Bridge {
 
   static Future<void> saveSettings(AppSettings settings) => _channel.invokeMethod('setSettings', jsonEncode(settings.json));
 
-  /// [accountId]: 8 baytlık hesap kimliği.
+  /// [accountId]: 8-byte account identifier.
   static Future<void> setAccountId(Uint8List accountId) => _channel.invokeMethod('setAccountId', base64Encode(accountId));
 
   static Future<void> setIntroSeen(bool seen) => _channel.invokeMethod('setIntroSeen', seen);

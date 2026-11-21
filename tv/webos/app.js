@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// GameTranslator TV uygulaması (webOS ve Tizen ortak).
-// HDMI girişini tam ekran gösterir, üstüne GameTranslator uygulamasından gelen altyazıyı basar.
-// TV'ye özgü işler platform.js'tedir. Eski TV tarayıcıları için ES5 ile yazıldı.
+// GameTranslator TV client (shared across webOS, Tizen, and Android TV).
+// Displays full-screen HDMI input and renders live subtitles sent by GameTranslator.
+// Platform-specific hooks live in platform.js; written in ES5 for broad TV WebView compatibility.
 (function () {
   'use strict';
 
-  // TV uygulamasının sürümü: appinfo.json, tv-tizen/config.xml ve tv-android/app/build.gradle ile aynı tutulur.
+  // TV app version kept in sync across app manifests and build configs.
   var APP_VERSION = '1.0.5';
   var t = window.t;
   var config = window.GAMETRANSLATOR_CONFIG || window.GAMETRANSLATOR_CONFIG || {};
@@ -14,29 +14,29 @@
 
   var server = null;
   var eventSource = null;
-  // Kumandayla seçilen port kayıtlıysa o kullanılır, yoksa PS5 otomatik aranır.
+  // Uses persisted remote-selected HDMI port if set; otherwise auto-detects console.
   var savedPort = Number(load('hdmi'));
   var hdmiPort = savedPort || 1;
 
   var bottomPercent = 7;
-  // Çevirinin yeri: oyundaki İngilizce altyazının üstünü örterek (cover), üstünde (above), altında (below)
-  // ya da sabit yükseklikte (fixed). Yeri bildirmeyen eski GameTranslator sürümlerinde sabit kalır.
+  // Subtitle placement mode: cover, above, below, or fixed.
+  // Falls back to fixed when placement metadata is not provided.
   var PLACEMENTS = { cover: 1, above: 1, below: 1, fixed: 1 };
   var placement = 'fixed';
-  // Gösterilen satırın oyundaki İngilizce altyazının yeri (ekrana oranla), bilinmiyorsa null.
+  // Normalized bounding box of the source subtitle region if known, otherwise null.
   var currentBox = null;
-  // Oyunun altyazısının gerçek yeri (örtme yerleşiminde çeviri buraya sığdırılır), ayarlardaki yazı boyu ve
-  // yazının şu an sığdırılmış olup olmadığı.
+  // Source subtitle box for cover fitting, configured base font size, and whether fit mode is active.
+  // Current fit state flag.
   var currentSource = null;
   var baseFontSize = 0;
   var fitted = false;
-  // Oyunun altyazısının satır yüksekliği (ekran yüksekliğine oranla); bilinmiyorsa 0.
+  // Normalized line height of the source subtitle, or 0 if unknown.
   var currentLine = 0;
   var coverBackground = '';
-  // Konuşmacı adının rengi; boşsa ad ayrı renkte yazılmaz.
+  // Speaker label highlight color; disabled when empty.
   var speakerColor = '';
 
-  // Önceki satır bu süreden kısa göründüyse okunamamış olabilir; yeni satırın üstünde bir süre daha kalır.
+  // Minimum hold duration for previous subtitle lines before replacement.
   var PREVIOUS_HOLD_MS = 2500;
   var shownAt = 0;
   var previousTimer = null;
@@ -44,15 +44,15 @@
   var hideTimer = null;
   var panelTimer = null;
 
-  // Bilgisayarın "temizle" olayı satırı bundan erken kaldırmaz: oyundaki satır çeviri gelirken kalkmışsa yazı TV'de
-  // bir an görünüp kayboluyordu. Süre, bilgisayarın okuma süresi kuralıyla aynıdır; üst sınırı daha kısadır.
+  // Prevents premature clear events from flashing out fresh subtitles before minimum hold expires.
+  // Bounded hold timestamp for incoming subtitle lines.
   var HOLD_MAX_MS = 5000;
   var holdUntil = 0;
-  // Bağlantı bir an koptuğunda yazı silinmez; ancak bu süre içinde geri gelmezse silinir.
+  // Grace period before clearing active subtitles after an SSE disconnect.
   var DROP_HIDE_MS = 6000;
   var dropTimer = null;
 
-  // Panelde görünen tanı bilgisi: "yazı TV'ye gelmiyor" bildirimlerinde sebebi buradan okuruz.
+  // Diagnostics counters displayed in the status panel for troubleshooting.
   var diag = { subtitles: 0, clears: 0, drops: 0, backgrounded: 0, lastHide: '-', place: '-', error: '' };
 
   function $(id) { return document.getElementById(id); }
@@ -95,7 +95,7 @@
     el.className = cls || '';
   }
 
-  // --- Başlatma parametreleri ---
+  // --- Launch parameters ---
 
   function parseParams(raw) {
     if (!raw) return {};
@@ -114,7 +114,7 @@
     }
   }
 
-  // Parametrelerdeki sunucu ve HDMI tercihini uygular; sunucu değiştiyse yeniden bağlanır.
+  // Applies server and HDMI preferences from launch params and reconnects if server changed.
   function applyParams(params) {
     if (params.hdmi >= 1 && params.hdmi <= 4) {
       hdmiPort = Number(params.hdmi);
@@ -127,7 +127,7 @@
     }
   }
 
-  // --- HDMI görüntüsü ---
+  // --- HDMI input ---
 
   function showHdmi(port) {
     setStatus('st-hdmi', String(port));
@@ -154,9 +154,9 @@
     });
   }
 
-  // --- Altyazı ---
+  // --- Subtitles ---
 
-  // Kutunun sayıları geçerli mi (0–1 arası, sağ soldan, alt üstten büyük).
+  // Validates and clamps normalized bounding box coordinates into [0, 1].
   function validBox(box) {
     if (!box || typeof box !== 'object') return null;
     var left = Number(box.left), top = Number(box.top), right = Number(box.right), bottom = Number(box.bottom);
@@ -168,13 +168,13 @@
     return { left: left, top: top, right: right, bottom: bottom };
   }
 
-  // paragraphs: görev paneli gibi başlık ve maddeli yazılar satır satır, sola yaslı gösterilir.
+  // paragraphs: renders multi-line quest/list text with preserved line breaks.
   function showSubtitle(text, duration, box, paragraphs, source, line) {
-    // source: oyunun altyazısının gerçek yeri (örtme yerleşiminde çeviri tam bu alana sığdırılır).
+    // source: normalized source box used when fitting translations in cover mode.
     currentSource = paragraphs ? null : validBox(source);
     currentLine = typeof line === 'number' && line > 0 ? line : 0;
-    // Önceki satır artık ayrıca gösterilmez: iki kutu üst üste binmiş gibi görünüyor, aynı cümlenin iki okunuşu
-    // da ikinci çeviri gibi duruyordu. Yeni satır eskisinin yerine geçer.
+    // Replace previous subtitle directly so stacked boxes do not overlap.
+    // Active line supersedes prior line.
     hidePrevious();
     shownAt = Date.now();
     holdUntil = shownAt + Math.min(HOLD_MAX_MS, 2000 + text.length * 60);
@@ -187,13 +187,13 @@
     setStatus('st-last', text.length > 40 ? text.slice(0, 40) + '…' : text);
     notePlace();
     clearTimeout(hideTimer);
-    // Geçersiz ya da çok kısa süre yazıyı gösterir göstermez kaldırmasın.
+    // Enforce a sane minimum display duration so short/invalid durations do not flicker.
     var ms = duration > 0 ? Math.max(1000, duration) : Math.min(8000, 2000 + text.length * 60);
     hideTimer = setTimeout(function () { hideSubtitle('timer'); }, ms);
   }
 
-  // Konuşmacı adları ("MARKOS: …", cümle ortasında başlayan ikinci konuşmacı dahil) ayarlarda açıksa ayrı renkte
-  // yazılır. Ad büyük harfle başlayan en çok üç sözcüktür ve satır başında ya da bir cümlenin bitiminde durur.
+  // Highlights speaker prefixes ("NAME: ") when speakerColor is configured.
+  // Matches speaker names at line start or after sentence boundaries.
   var SPEAKER = /(^|[.!?…”"]\s+|\n)([A-Z\u0621-\u064A][^\s:.!?]*(?: [A-Z\u0621-\u064A][^\s:.!?]*){0,2}):(?=\s)/g;
   function setSubtitleText(el, text, paragraphs) {
     if (!speakerColor || paragraphs) {
@@ -215,7 +215,7 @@
     if (last < text.length) el.appendChild(document.createTextNode(text.slice(last)));
   }
 
-  // Yazının ekrandaki gerçek yeri ve görünürlüğü (tanı için).
+  // Records rendered subtitle bounds and visibility for diagnostics.
   function notePlace() {
     var el = $('subtitle-text');
     var rect = el.getBoundingClientRect();
@@ -225,7 +225,7 @@
     renderDiag();
   }
 
-  // reason: yazıyı neyin kaldırdığı; panelde görünen süreyle birlikte sebebi gösterir.
+  // Hides active subtitle and records the hide reason and elapsed duration.
   function hideSubtitle(reason) {
     clearTimeout(hideTimer);
     if ($('subtitle').className !== 'hidden') {
@@ -237,7 +237,7 @@
     hidePrevious();
   }
 
-  // Bilgisayardan gelen "temizle": yazı okunacak kadar görünmediyse kalan süre dolunca kaldırılır.
+  // Handles clear events, deferring removal until holdUntil if still within minimum hold window.
   function onClear() {
     diag.clears++;
     renderDiag();
@@ -259,9 +259,9 @@
     $('subtitle-prev').className = 'hidden';
   }
 
-  // --- Ekranı çevir ---
-  // Bilgisayar ekranın tamamını okuyup her yazı grubunun çevirisini yeriyle gönderir. Her çeviri kendi İngilizce
-  // yazısını örter; yazı boyu o yazının satır yüksekliğinden seçilir, Türkçe uzun gelirse sığana kadar küçülür.
+  // --- Full-screen translation ---
+  // Renders positioned full-screen OCR translation items over matching screen regions.
+  // Scales font size down if translated text exceeds the target box height.
 
   var screenTimer = null;
   var SCREEN_PAD = 0.004;
@@ -269,7 +269,7 @@
 
   function showScreen(items, duration) {
     var host = $('screen');
-    // "Ekran çevriliyor…" yazısı sonuçların üstünde kalmasın.
+    // Clear single-line subtitle overlay when full-screen items arrive.
     hideSubtitle('screen');
     host.innerHTML = '';
     host.className = '';
@@ -293,7 +293,7 @@
       var size = Math.max(SCREEN_MIN_FONT, Math.min(96, Math.round(line * 0.95)));
       el.style.fontSize = size + 'px';
       host.appendChild(el);
-      // Türkçe çoğu zaman İngilizceden uzundur: kutu biraz uzayabilir, daha fazlası için yazı küçülür.
+      // Allow moderate vertical expansion first, then shrink font size to fit.
       var limit = Math.max(boxHeight * 1.5, line * 2.6);
       while (el.scrollHeight > limit && size > SCREEN_MIN_FONT) {
         size -= 2;
@@ -310,14 +310,14 @@
     $('screen').innerHTML = '';
   }
 
-  // Konum hem GameTranslator uygulamasından hem kumandanın oklarıyla ayarlanır. Kumandayla
-  // seçilen konum, uygulamadaki ayar değişene kadar korunur (son değiştiren geçerlidir).
+  // Subtitle vertical position can be adjusted from the app or remote UP/DOWN keys.
+  // Most recent position adjustment takes precedence until changed again.
   function setBottom(percent) {
     bottomPercent = Math.max(0, Math.min(85, percent));
     layout();
   }
 
-  // Altyazıyı seçilen yerleşime göre konumlar. İngilizce altyazının yeri bilinmiyorsa sabit yükseklik kullanılır.
+  // Positions subtitle overlay according to placement mode; falls back to fixed when box is unknown.
   function layout() {
     var el = $('subtitle');
     var cover = $('subtitle-cover');
@@ -332,18 +332,18 @@
     cover.className = 'hidden';
     unfit();
 
-    // Altyazı yokken veya kutu tanımlı değilken örtü tek başına kalmasın
+    // Do not show cover overlay without an active subtitle and valid box.
     if (!box || el.className === 'hidden') return;
 
     var mode = placement;
-    // Ekranın kenarında yer yoksa öbür yana geçilir.
+    // Flip above/below if too close to bottom or top screen edge.
     if (mode === 'below' && box.bottom > 0.88) mode = 'above';
     if (mode === 'above' && box.top < 0.12) mode = 'below';
 
     if (mode === 'cover' && currentSource) {
       fitToSource(el, cover, currentSource);
     } else if (mode === 'cover') {
-      // İngilizce altyazının tam üstünü örten koyu zemin
+      // Dark backdrop covering the source subtitle region.
       var padX = 0.02; // Yatayda %2 pay
       var padY = 0.015; // Dikeyde %1.5 pay
       var cLeft = Math.max(0.01, box.left - padX);
@@ -357,14 +357,14 @@
       cover.style.height = ((cBottom - cTop) * 100).toFixed(2) + '%';
       cover.className = '';
 
-      // Türkçe çeviri bu örtünün tam ortasına dikeyde oturur
+      // Vertically center translated subtitle over the cover box.
       var centerBottom = (1.0 - (box.top + box.bottom) / 2.0) * 100.0;
       el.style.top = 'auto';
       el.style.bottom = Math.max(2, Math.min(92, centerBottom)).toFixed(2) + '%';
       el.style.transform = 'translateY(50%)';
       el.style.webkitTransform = 'translateY(50%)';
     } else if (mode === 'above') {
-      // İngilizce yazının hemen üstünde (İngilizce yazıyı kapatmaz)
+      // Position just above the source subtitle box.
       cover.className = 'hidden';
       var aboveBottom = (1.0 - box.top) * 100.0 + 1.5;
       el.style.top = 'auto';
@@ -372,7 +372,7 @@
       el.style.transform = 'none';
       el.style.webkitTransform = 'none';
     } else if (mode === 'below') {
-      // İngilizce yazının hemen altında
+      // Position just below the source subtitle box.
       cover.className = 'hidden';
       var belowTop = box.bottom * 100.0 + 1.5;
       el.style.bottom = 'auto';
@@ -382,21 +382,21 @@
     }
   }
 
-  // Çeviriyi oyunun altyazısının kapladığı alana sığdırır: aynı genişlikte sarılır, yazı boyu alana sığan en büyük
-  // boydur (ayarlardaki boyun 0,6–1,6 katı arasında). Böylece çeviri oyunun altyazısıyla aynı yerde, aynı satır
-  // düzeninde ve hemen hemen aynı boyda durur; zemin tek parçadır. En küçük boyda da sığmıyorsa zemin yazıya göre büyür.
+  // Fits translated text inside the source subtitle box while selecting the largest readable font size.
+  // Clamps font size relative to configured base size and source line height.
+  // Expands cover backdrop if text still overflows at minimum font size.
   function fitToSource(el, cover, box) {
     var padX = 0.008, padY = 0.006;
     var left = Math.max(0, box.left - padX), right = Math.min(1, box.right + padX);
     var top = Math.max(0, box.top - padY), bottom = Math.min(1, box.bottom + padY);
-    // Çok dar altyazıda (tek sözcük) çeviri en az bu kadar yer bulur.
+    // Enforce a minimum width so short single-word boxes remain readable.
     var minWidth = 0.16;
     if (right - left < minWidth) {
       var center = (left + right) / 2;
       left = Math.max(0, center - minWidth / 2);
       right = Math.min(1, center + minWidth / 2);
     }
-    // Zemin önce oyunun altyazısının yerine konur; ölçüler ondan alınır (yüzde ve piksel karışmasın).
+    // Place cover first so rendered pixel bounds can be measured accurately.
     var place = function (l, t, r, b) {
       cover.style.left = (l * 100).toFixed(3) + '%';
       cover.style.top = (t * 100).toFixed(3) + '%';
@@ -404,7 +404,7 @@
       cover.style.height = ((b - t) * 100).toFixed(3) + '%';
     };
     place(left, top, right, bottom);
-    // Oyunun altyazısı alttan hiç görünmesin: zemin tam opaktır.
+    // Use opaque backdrop in cover mode so source text does not bleed through.
     if (!fitted) coverBackground = cover.style.background;
     cover.style.background = 'rgb(10, 10, 12)';
     cover.className = '';
@@ -421,7 +421,7 @@
     text.style.padding = '0 6px';
     text.style.lineHeight = '1.2';
 
-    // En büyük boy oyunun altyazısının boyudur (satır yüksekliği biliniyorsa); bilinmiyorsa ayarlardaki boy.
+    // Compute font size bounds from source line height or base font size.
     var base = baseFontSize || 46;
     var low = Math.max(16, Math.round(base * 0.55));
     var high = currentLine > 0 ? Math.round(currentLine * perY * 1.05) : Math.round(base * 1.15);
@@ -443,7 +443,7 @@
     }
     text.style.fontSize = best + 'px';
 
-    // Yazı en küçük boyda da taşıyorsa zemin onu da içine alacak kadar büyür (tek parça kalır).
+    // Expand cover box slightly if text still exceeds bounds at minimum size.
     var rect = text.getBoundingClientRect();
     var growTop = Math.max(0, area.top - rect.top + 2) / perY, growBottom = Math.max(0, rect.bottom - area.bottom + 2) / perY;
     var growLeft = Math.max(0, area.left - rect.left + 2) / perX, growRight = Math.max(0, rect.right - area.right + 2) / perX;
@@ -452,7 +452,7 @@
     fitted = true;
   }
 
-  // Sığdırma yerleşiminden çıkınca yazının ayarlardaki boyu ve boşlukları geri gelir.
+  // Restores base font size and default padding when leaving cover-fit mode.
   function unfit() {
     if (!fitted) return;
     fitted = false;
@@ -463,7 +463,7 @@
     if (baseFontSize) text.style.fontSize = baseFontSize + 'px';
   }
 
-  // Bazı TV'lerde sabit konumun ekran dışına taşmasını engeller.
+  // Clamps bottom offset within safe screen bounds.
   function keepOnScreen(el, cover) {
     if (placement === 'fixed') {
       bottomPercent = Math.max(2, Math.min(85, bottomPercent));
@@ -488,7 +488,7 @@
       $('subtitle-text').style.background = 'rgba(0, 0, 0, ' + alpha + ')';
       $('subtitle-prev-text').style.background = 'rgba(0, 0, 0, ' + (alpha * 0.83).toFixed(2) + ')';
       var coverEl = $('subtitle-cover');
-      // Örtü İngilizce altyazıyı tamamen kapatmalı: %92 koyulukta beyaz yazı soluk da olsa seçiliyordu.
+      // Keep cover box opaque to prevent underlying text bleed-through.
       if (coverEl) coverEl.style.background = 'rgb(10, 10, 12)';
     }
     if (typeof style.bold === 'boolean') {
@@ -502,15 +502,15 @@
   }
 
   function nudgeSubtitle(step) {
-    // Yer oyundaki altyazıya bağlıysa kumandayla taşınmaz.
+    // Remote vertical nudging applies only in fixed placement mode.
     if (placement !== 'fixed') return;
     setBottom(bottomPercent + step);
     save('bottom', bottomPercent);
-    // Nereye gittiği görülsün diye yazı yoksa örnek gösterilir.
+    // Show a brief sample line if no subtitle is currently visible.
     if ($('subtitle').className === 'hidden') showSubtitle(t('positionPreview'), 2500);
   }
 
-  // --- Sunucu bağlantısı (Server-Sent Events) ---
+  // --- Server-Sent Events stream ---
 
   function onEvent(name, handler) {
     eventSource.addEventListener(name, function (e) {
@@ -550,7 +550,7 @@
       setStatus('st-conn', t('connected'), 'ok');
     };
     eventSource.onerror = function () {
-      // Bağlantı kısa süre içinde geri gelmezse eski altyazı ekranda asılı kalmasın. Bir anlık kopma yazıyı silmez.
+      // Clear stale subtitles only if disconnect outlasts DROP_HIDE_MS.
       diag.drops++;
       renderDiag();
       if (dropTimer === null) {
@@ -561,7 +561,7 @@
         }, DROP_HIDE_MS);
       }
       setStatus('st-conn', t('reconnecting'), 'bad');
-      // Bilgisayarın adresi değişmiş olabilir.
+      // Host IP may have changed; record failure to trigger LAN scan if needed.
       noteFailure();
     };
     onEvent('subtitle', function (data) {
@@ -577,9 +577,9 @@
     onEvent('speech-stop', stopSpeech);
   }
 
-  // --- Türkçe dublaj ---
-  // Bilgisayar her cümleyi seslendirip adresini gönderir; TV oyunun sesiyle birlikte çalar. Bilgisayar sıradakini
-  // bu ses bitince gönderir; yine de üst üste gelirse eskisi kesilir.
+  // --- Audio playback ---
+  // Plays synthesized speech audio URLs pushed by the host.
+  // Stops any currently playing audio before starting a new clip.
 
   var speech = null;
 
@@ -596,15 +596,15 @@
 
   function stopSpeech() {
     if (!speech) return;
-    try { speech.pause(); } catch (e) { /* yok */ }
+    try { speech.pause(); } catch (e) { /* ignore */ }
     speech = null;
   }
 
-  // --- Bilgisayarı ağda bulma ---
-  // Bilgisayar TV uygulamasını açamıyorsa adres gelmez; kayıtlı adres de eskiyebilir (bilgisayarın IP'si değişti).
-  // Uygulama o zaman ağı tarar: TV'nin kendi ağını (adresini söyleyebiliyorsa) ve kayıtlı adresin ağını. Kayıtlı adres
-  // art arda FAILS_BEFORE_SCAN kez yanıt vermezse tarama kısa süre içinde başlar (CouchSubs aff58ea). LG webOS'ta
-  // platform.localAddress yoktu; tarama hiç başlamıyor, TV eski adreste sonsuza dek bekliyordu.
+  // --- LAN host discovery ---
+  // Scans local subnets when no launch server is provided or saved host stops responding.
+  // Checks TV local subnet first, then saved server subnet, falling back to 192.168.1.
+  // Triggers a fast scan after FAILS_BEFORE_SCAN consecutive connection errors.
+  // Falls back gracefully when platform.localAddress is unavailable.
 
   var SERVER_PORT = 8787;
   var SCAN_PARALLEL = 24;
@@ -617,8 +617,8 @@
   var scanning = false;
   var failures = 0;
 
-  // Bekleyen tarama daha erken başlayacaksa korunur; EventSource birkaç saniyede bir yeniden denediği için sayaç
-  // baştan kurulursa tarama hiç başlamazdı.
+  // Preserve an earlier scheduled scan rather than pushing it further out.
+  // Avoid resetting shorter backoff timers on repeated SSE retries.
   function scheduleScan(delay) {
     if (scanning) return;
     if (delay === undefined) delay = SCAN_PAUSE_MS;
@@ -637,7 +637,7 @@
     scanTimer = null;
   }
 
-  // Bağlantı hatası: kayıtlı adres art arda birkaç kez yanıt vermediyse ağ hemen taranır, yoksa bir süre beklenir.
+  // Increments failure counter and schedules quick or standard subnet scan.
   function noteFailure() {
     failures++;
     scheduleScan(failures >= FAILS_BEFORE_SCAN ? SCAN_SOON_MS : SCAN_PAUSE_MS);
@@ -648,7 +648,7 @@
     return match ? match[1] : null;
   }
 
-  // Taranacak ağlar: TV'nin kendi ağı, sonra kayıtlı adresin ağı (aynıysa bir kez); ikisi de yoksa 192.168.1.
+  // Builds deduplicated list of /24 subnets to scan.
   function scanSubnets(done) {
     var fromServer = subnetOf(server || load('server'));
     function finish(ip) {
@@ -666,7 +666,7 @@
       answered = true;
       finish(ip);
     }
-    // Adresi soran servis yanıt vermezse tarama kayıtlı adresin ağıyla sürer.
+    // Timeout guard if localAddress callback does not respond.
     setTimeout(function () { once(null); }, 3000);
     try {
       platform.localAddress(once);
@@ -725,9 +725,9 @@
           if (!ok) return pump();
           found = true;
           scanning = false;
-          // Bulunan adres kaydedilir: TV bir sonraki açılışta eski adrese takılmasın.
+          // Persist discovered host address for future launches.
           save('server', address);
-          // Aynı bilgisayarsa EventSource kendisi yeniden bağlanır; kapanıp vazgeçtiyse (CLOSED) yeniden kurulur.
+          // Reconnect EventSource if server changed or existing stream is closed.
           if (address !== server || (eventSource && eventSource.readyState === 2)) connect(address);
         });
       }
@@ -735,8 +735,8 @@
     });
   }
 
-  // --- Demo ---
-  // Mağaza incelemesi ve ilk kez açanlar için: PS5 ve bilgisayar olmadan örnek altyazılar gösterilir.
+  // --- Demo mode ---
+  // Cycles sample subtitles when no host is connected so users can preview layout.
 
   var DEMO_LINES = [
     'ليس لدينا وقت نضيعه هنا.',
@@ -772,20 +772,20 @@
     demoTimer = null;
     hideSubtitle('demo');
     $('demo-badge').className = 'hidden';
-    // Uygulamaya bağlı değilse bekleme ekranına dönülür.
+    // Restore waiting card when not connected to a host.
     if (!server) $('waiting').className = '';
   }
 
-  // Geri tuşu: önce demo ya da panel kapanır; giriş ekranında TV'nin ana ekranına dönülür.
+    // Back key dismisses demo or panel first, or exits the app.
   function goBack() {
     if (demoRunning()) return stopDemo();
     if ($('panel').className !== 'hidden') return hidePanel();
     platform.exit();
   }
 
-  // --- Panel ve kumanda ---
+  // --- Status panel & remote keys ---
 
-  // "1–4: HDMI girişi · 0: …" satırını tuş başına bir satıra böler; tuş adı vurgu renginde.
+  // Formats dot-separated shortcut hints into styled rows.
   function formatKeys() {
     var el = $('keys');
     var parts = el.textContent.split(' · ');
@@ -802,7 +802,7 @@
     }
   }
 
-  // Panel açıkken bekleme kutusu kapanır: ikisi üst üste binince yazılar okunmuyor.
+  // Hide waiting card while status panel is open to prevent overlap.
   function showPanel(autoHide) {
     $('waiting').className = 'hidden';
     $('panel').className = '';
@@ -819,7 +819,7 @@
     if ($('panel').className === 'hidden') showPanel(false); else hidePanel();
   }
 
-  // Sayı tuşu olmayan kumandalar için: panel açıkken sol ve sağ HDMI girişini değiştirir.
+  // Cycles HDMI port left/right using directional keys while panel is open.
   function stepHdmi(step) {
     hdmiPort = (hdmiPort + step + 3) % 4 + 1;
     save('hdmi', hdmiPort);
@@ -829,13 +829,13 @@
 
   document.addEventListener('keydown', function (e) {
     var code = e.keyCode;
-    if (code === 48) { // 0: elle seçimi unut, konsolu yeniden ara
+    if (code === 48) { // 0: clear saved HDMI port and re-detect console
       save('hdmi', '');
       autoSelectConsole(function () {
         setStatus('st-hdmi', hdmiPort + ' (' + t('consoleNotFound') + ')', 'bad');
       });
       showPanel(true);
-    } else if (code >= 49 && code <= 52) { // 1–4
+    } else if (code >= 49 && code <= 52) { // 1-4
       hdmiPort = code - 48;
       save('hdmi', hdmiPort);
       showHdmi(hdmiPort);
@@ -861,7 +861,7 @@
     }
   });
 
-  // Uygulama zaten açıkken yeniden başlatılırsa (ör. GameTranslator onu öne getirdiğinde) parametreler burada gelir.
+  // Handle relaunch parameters when app is brought back to foreground.
   platform.onRelaunch(function (raw) { applyParams(parseParams(raw)); });
 
   platform.init();
@@ -881,7 +881,7 @@
     if (address) connect(address); else $('waiting').className = '';
   }
   if (!server) scanForServer();
-  // Bekleme ekranı açıksa panel kendiliğinden açılmaz; yeşil tuşla açılabilir.
+  // Keep panel hidden on waiting screen unless toggled by remote.
   if (server) showPanel(true); else hidePanel();
 })();
 

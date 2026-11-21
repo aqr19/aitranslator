@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Telefondan TV uygulaması kurma: Android tarafındaki tvinstall/TvInstallChannel ile konuşan köprü ve hata metinleri.
+// Installing the TV app from the phone: platform channel bridge and error messages for tvinstall/TvInstallChannel.
 import 'package:flutter/services.dart';
 
 enum TvKind { lg, samsung, android }
@@ -28,7 +28,7 @@ class FoundTv {
   final String host;
   final String name;
 
-  /// Kurulum portu açık: LG'de geliştirici modu, Android'de hata ayıklama.
+  /// Installation port open: Developer Mode on LG, ADB debugging on Android.
   final bool ready;
 }
 
@@ -47,7 +47,7 @@ class TvCheck {
   final bool ready;
   final bool keyServer;
 
-  /// LG: bu TV'nin anahtarı kayıtlı, parola yeniden sorulmaz.
+  /// LG: TV key is already saved, no passphrase prompt needed.
   final bool hasKey;
 }
 
@@ -57,11 +57,11 @@ class TvInstallResult {
   final bool ok;
   final String? version;
 
-  /// false: TV'deki sürüm zaten günceldi, yalnız açıldı.
+  /// false: TV version was already up to date, app was simply launched.
   final bool installed;
   final bool launched;
 
-  /// LG geliştirici modunun kalan süresi (saat).
+  /// Remaining hours of LG Developer Mode session.
   final int? hoursLeft;
   final String? error;
   final String? detail;
@@ -71,12 +71,12 @@ class TvBridge {
   static const _channel = MethodChannel('gt/tv');
   static const _events = EventChannel('gt/tv/events');
 
-  /// Kurulum aşamaları: connecting, approve, checking, key, `uploading:yüzde`, installing, verifying, launching.
+  /// Installation stages: connecting, approve, checking, key, `uploading:percent`, installing, verifying, launching.
   static Stream<String> get stages => _events.receiveBroadcastStream().map((event) => ((event as Map)['stage'] as String?) ?? '');
 
-  /// Uygulamayla gelen TV paketlerinin sürümleri (marka → sürüm).
-  static Future<Map<TvKind, String>> bundled() async {
-    final map = await _channel.invokeMethod<Map<Object?, Object?>>('bundled') ?? {};
+  /// Bundled TV package versions (brand -> version).
+  static Future> bundled() async {
+    final map = await _channel.invokeMethod>('bundled') ?? {};
     final result = <TvKind, String>{};
     for (final entry in map.entries) {
       final kind = tvKindOf(entry.key as String?);
@@ -88,7 +88,7 @@ class TvBridge {
   static Future<String?> phoneAddress() => _channel.invokeMethod<String>('phoneAddress');
 
   static Future<SavedTv?> saved() async {
-    final map = await _channel.invokeMethod<Map<Object?, Object?>>('saved');
+    final map = await _channel.invokeMethod>('saved');
     final kind = tvKindOf(map?['brand'] as String?);
     if (map == null || kind == null) return null;
     return SavedTv(kind, map['host'] as String? ?? '', map['name'] as String? ?? '', map['version'] as String?);
@@ -96,24 +96,24 @@ class TvBridge {
 
   static Future<void> forget() => _channel.invokeMethod('forget');
 
-  /// Elle yazılan adresi temizler; adres değilse null.
+  /// Normalizes a manually entered IP/host string; returns null if invalid.
   static Future<String?> normalize(String text) => _channel.invokeMethod<String>('normalize', text);
 
   static Future<List<FoundTv>> find(TvKind kind) async {
     final list = await _channel.invokeMethod<List<Object?>>('find', kind.id) ?? [];
     return [
-      for (final item in list.cast<Map<Object?, Object?>>())
+      for (final item in list.cast>())
         FoundTv(kind, item['host'] as String, item['name'] as String? ?? kind.title, item['ready'] as bool? ?? false),
     ];
   }
 
   static Future<TvCheck> check(TvKind kind, String host) async {
-    final map = await _channel.invokeMethod<Map<Object?, Object?>>('check', {'brand': kind.id, 'host': host}) ?? {};
+    final map = await _channel.invokeMethod>('check', {'brand': kind.id, 'host': host}) ?? {};
     return TvCheck(map['ready'] as bool? ?? false, map['keyServer'] as bool? ?? false, map['hasKey'] as bool? ?? false);
   }
 
   static Future<TvInstallResult> install(TvKind kind, String host, {String name = '', String? passphrase, bool force = false}) async {
-    final map = await _channel.invokeMethod<Map<Object?, Object?>>(
+    final map = await _channel.invokeMethod>(
           'install',
           {'brand': kind.id, 'host': host, 'name': name, 'passphrase': passphrase, 'force': force},
         ) ??
@@ -132,75 +132,74 @@ class TvBridge {
   static Future<void> cancel() => _channel.invokeMethod('cancel');
 }
 
-/// Hatanın sade dilde açıklaması ve çözümü (Windows'taki TvAppCard.Message ile aynı durumlar).
+/// Human-readable error title and troubleshooting hint.
 ({String title, String fix}) tvErrorText(String? error, TvKind kind) {
   final android = kind == TvKind.android;
   return switch (error) {
     'UNREACHABLE' => android
         ? (
-            title: 'TV yanıt vermedi',
-            fix: 'TV açık mı ve telefonla aynı Wi-Fi ağında mı? Geliştirici seçeneklerinde "USB hata ayıklama" açık olmalı. '
-                'Bazı TV\'lerde bu ayar TV yeniden başlayınca kapanır; açıp yeniden dene.',
+            title: 'التلفاز لا يستجيب',
+            fix: 'تأكد أن التلفاز يعمل ومتصل بنفس شبكة Wi-Fi، وأن خيار "تصحيح أخطاء USB / الشبكة" مفعّل في خيارات المطوّر. '
+                'بعض الشاشات تغلق هذا الخيار بعد إعادة التشغيل؛ فعّله وأعد المحاولة.',
           )
         : (
-            title: 'TV yanıt vermedi',
-            fix: 'TV açık mı ve telefonla aynı Wi-Fi ağında mı? Developer Mode uygulamasında "Dev Mode Status" açık olmalı; '
-                'açtıktan sonra TV yeniden başlar, açılmasını bekle.',
+            title: 'التلفاز لا يستجيب',
+            fix: 'تأكد أن التلفاز يعمل ومتصل بنفس شبكة Wi-Fi، وأن "Dev Mode Status" مفعّل داخل تطبيق Developer Mode؛ '
+                'بعد تفعيله يعيد التلفاز التشغيل، انتظر حتى يكتمل ثم أعد المحاولة.',
           ),
     'KEY_SERVER_OFF' => (
-        title: 'Key Server kapalı',
-        fix: 'TV\'de Developer Mode uygulamasını aç, "Key Server"ı aç ve uygulamayı ekranda bırak. Sonra yeniden dene.',
+        title: 'خدمة Key Server متوقفة',
+        fix: 'افتح تطبيق Developer Mode على التلفاز، فعّل "Key Server" واترك التطبيق مفتوحاً على الشاشة، ثم أعد المحاولة.',
       ),
     'WRONG_PASSPHRASE' => (
-        title: 'Parola doğru değil',
-        fix: 'TV ekranında Developer Mode uygulamasının sol altındaki 6 karakterlik "Passphrase"i yeniden yaz. '
-            '0 (sıfır) ile O harfi, 1 ile I harfi karışabilir.',
+        title: 'رمز المرور غير صحيح',
+        fix: 'أعد إدخال رمز "Passphrase" المكون من 6 أحرف الظاهر أسفل يسار شاشة Developer Mode في التلفاز. '
+            'انتبه للفرق بين 0 (صفر) وحرف O، وبين 1 وحرف I.',
       ),
     'KEY_REFUSED' => (
-        title: 'TV anahtarı kabul etmedi',
-        fix: 'Geliştirici modu kapatılıp açıldıysa TV yeni bir anahtar üretir. Key Server\'ı açıp parolayı yeniden yaz.',
+        title: 'رفض التلفاز مفتاح الاتصال',
+        fix: 'عند إيقاف وضع المطوّر وإعادة تشغيله يُنشئ التلفاز مفتاحاً جديداً. فعّل Key Server وأعد إدخال الرمز.',
       ),
     'NOT_APPROVED' => (
-        title: 'TV\'de izin verilmedi',
-        fix: 'Yeniden dene. TV\'de "USB hata ayıklamaya izin verilsin mi?" sorusu çıkınca "Bu bilgisayardan her zaman izin ver"i '
-            'işaretleyip "İzin ver"i seç. Soru TV ekranında yaklaşık bir buçuk dakika bekler.',
+        title: 'لم يتم منح الإذن على التلفاز',
+        fix: 'أعد المحاولة. عند ظهور رسالة "هل تريد السماح بتصحيح أخطاء USB؟" على شاشة التلفاز، حدد "السماح دائماً من هذا الجهاز" '
+            'واضغط "سماح". تبقى الرسالة على الشاشة لدقيقة ونصف تقريباً.',
       ),
     'NOT_ENOUGH_SPACE' => (
-        title: 'TV\'de yer kalmamış',
-        fix: 'TV\'den kullanmadığın bir uygulamayı kaldır ve yeniden dene.',
+        title: 'لا توجد مساحة كافية على التلفاز',
+        fix: 'احذف تطبيقاً غير مستخدم من التلفاز ثم أعد المحاولة.',
       ),
     'CONNECTION_LOST' => (
-        title: 'Bağlantı koptu',
-        fix: 'Kurulum sırasında TV ile bağlantı kesildi. Telefonun ekranı açık ve Wi-Fi\'ye bağlı kalsın; yeniden dene.',
+        title: 'انقطع الاتصال',
+        fix: 'انقطع الاتصال بالتلفاز أثناء التثبيت. أبقِ شاشة الهاتف مفتوحة ومتصلة بشبكة Wi-Fi وأعد المحاولة.',
       ),
     'TOO_OLD' => (
-        title: 'Bu TV çok eski',
-        fix: 'GameTranslator TV uygulaması bu TV\'nin yazılımında çalışmıyor.',
+        title: 'إصدار التلفاز قديم',
+        fix: 'تطبيق GameTranslator TV لا يدعم إصدار النظام الحالي على هذا التلفاز.',
       ),
     'PACKAGE_MISSING' => (
-        title: 'TV paketi bulunamadı',
-        fix: 'Bu telefon uygulamasının içinde TV paketi yok. Uygulamanın son sürümünü kur.',
+        title: 'حزمة التلفاز غير موجودة',
+        fix: 'تطبيق الهاتف الحالي لا يحتوي على حزمة التلفاز. ثبّت أحدث إصدار من التطبيق.',
       ),
-    'CANCELLED' => (title: 'Kurulum durduruldu', fix: 'Hazır olduğunda yeniden başlatabilirsin.'),
+    'CANCELLED' => (title: 'تم إيقاف التثبيت', fix: 'يمكنك إعادة البدء عندما تكون جاهزاً.'),
     _ => (
-        title: 'TV uygulaması kurulamadı',
-        fix: 'Yeniden dene. TV\'yi kapatıp açmak yarım kalan kurulumların çoğunu düzeltir. Yine olmazsa aşağıdaki "TV\'nin söylediği" '
-            'yazısıyla birlikte bize bildir.',
+        title: 'تعذّر تثبيت تطبيق التلفاز',
+        fix: 'أعد المحاولة. إعادة تشغيل التلفاز تحل معظم مشاكل التثبيت المعلّقة. إذا استمرت المشكلة أرسل رسالة الخطأ الظاهرة أدناه.',
       ),
   };
 }
 
-/// Kurulum aşamasının Türkçe adı.
+/// Arabic label for each TV installation stage.
 String tvStageText(String stage) {
-  if (stage.startsWith('uploading:')) return 'Uygulama TV\'ye gönderiliyor… %${stage.substring(10)}';
+  if (stage.startsWith('uploading:')) return 'جارٍ إرسال التطبيق إلى التلفاز… %${stage.substring(10)}';
   return switch (stage) {
-    'connecting' => 'TV\'ye bağlanılıyor…',
-    'approve' => 'TV\'de izin bekleniyor…',
-    'checking' => 'TV\'deki sürüme bakılıyor…',
-    'key' => 'TV\'den anahtar alınıyor…',
-    'installing' => 'TV\'ye kuruluyor…',
-    'verifying' => 'Kurulum doğrulanıyor…',
-    'launching' => 'TV\'de açılıyor…',
-    _ => 'Hazırlanıyor…',
+    'connecting' => 'جارٍ الاتصال بالتلفاز…',
+    'approve' => 'بانتظار الموافقة على شاشة التلفاز…',
+    'checking' => 'جارٍ التحقق من الإصدار على التلفاز…',
+    'key' => 'جارٍ جلب مفتاح الاتصال من التلفاز…',
+    'installing' => 'جارٍ التثبيت على التلفاز…',
+    'verifying' => 'جارٍ التحقق من التثبيت…',
+    'launching' => 'جارٍ تشغيل التطبيق على التلفاز…',
+    _ => 'جارٍ التحضير…',
   };
 }

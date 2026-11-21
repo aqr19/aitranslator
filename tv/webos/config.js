@@ -1,4 +1,4 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Yalnız geliştirme için: uygulama başlatma parametresi olmadan açıldığında kullanılacak sunucu.
-// Normalde GameTranslator uygulaması TV uygulamasını kendi adresiyle başlatır; bu dosya boş kalır.
+// Development only: optional server address used when launched without startup parameters.
+// Normally the GameTranslator app launches the TV app with its own address; leave empty in production.
 window.GAMETRANSLATOR_CONFIG = {};

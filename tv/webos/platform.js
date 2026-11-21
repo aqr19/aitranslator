@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// webOS'a özgü işler. Tizen karşılığı: tv-tizen/platform.js
+// webOS-specific platform bridge (Tizen counterpart: tv/tizen/platform.js).
 (function () {
   'use strict';
 
   window.GAMETRANSLATOR_PLATFORM = window.GAMETRANSLATOR_PLATFORM = {
     backKey: 461,
 
-    // Oyun kumandayla oynanır, TV kumandasına dokunulmaz; TV bunu boşta sanıp ekran koruyucuya ve sonra uykuya
-    // geçer. TV ekran koruyucuyu açmadan önce abonelere zaman damgalı bir istek yollar; ack:false yanıtı onu erteler
-    // (Kodi'nin webOS sürümünün yaptığı gibi). Servis yoksa ya da izin verilmezse sessizce geçilir.
+    // Gameplay uses the game controller while the TV remote stays idle; the TV may otherwise enter screensaver/sleep.
+    // Before activating the screensaver, webOS sends a timestamped request to subscribers; ack:false defers it
+    // if the service/permission is available; otherwise fail silently.
     init: function () {
       var CLIENT = 'com.gametranslator.tv';
       try {
@@ -17,7 +17,7 @@
           var request;
           try { request = JSON.parse(message); } catch (e) { return; }
           if (!request) return;
-          // Panelin tanı satırı için: servis izin vermediyse sebebi, verdiyse ertelenen istek sayısı.
+          // Diagnostic summary for the status panel: permission reason or deferred count.
           if (request.returnValue === false) window.__screenSaverStatus = 'denied: ' + (request.errorText || request.errorCode);
           if (request.timestamp === undefined) return;
           window.__screenSaverCount = (window.__screenSaverCount || 0) + 1;
@@ -29,7 +29,7 @@
         };
         register.call('luna://com.webos.service.tvpower/power/registerScreenSaverRequest',
           JSON.stringify({ subscribe: true, clientName: CLIENT }));
-        // Köprü nesnesi çöpe gitmesin; abonelik uygulama açık kaldıkça sürer.
+        // Keep subscription handle alive for the lifetime of the app.
         window.__screenSaverBridge = register;
       } catch (e) {}
     },
@@ -62,8 +62,8 @@
       host.appendChild(video);
     },
 
-    // TV'nin giriş listesinden oyun konsolunun bağlı olduğu HDMI portunu bulur.
-    // Bulamazsa callback'i null ile çağırır.
+    // Finds the HDMI input port connected to the game console from the TV input list.
+    // Invokes callback with null if no matching input is found.
     findConsolePort: function (callback) {
       var done = false;
       function finish(port, label) {
@@ -77,7 +77,7 @@
           var devices;
           try { devices = JSON.parse(msg).devices || []; } catch (e) { return finish(null); }
           var hdmi = devices.filter(function (d) { return /^HDMI_/.test(d.id); });
-          // Konsol dinlenme modundayken giriş etkin görünmez ama etiketi kalır; etkin olan tercih edilir.
+          // Inactive inputs may still carry a label when in rest mode; prefer active ones.
           var consoles = hdmi.filter(function (d) {
             return d.spdSourceDeviceInfo === 'GAME' || /playstation|ps5/i.test((d.label || '') + ' ' + (d.spdProductDescription || ''));
           });
@@ -86,7 +86,7 @@
           finish(pick ? pick.port : null, pick ? pick.label : null);
         };
         bridge.call('luna://com.webos.service.eim/getAllInputStatus', '{}');
-        // Köprü nesnesi çöpe gitmesin diye geri çağrı gelene kadar tutulur.
+        // Retain request reference until callback completes.
         window.__eimBridge = bridge;
         setTimeout(function () { finish(null); }, 3000);
       } catch (e) {
@@ -119,7 +119,7 @@
       }
     },
 
-    // TV'nin yerel ağdaki IPv4 adresi (kablolu öncelikli); bilinemezse null. Uygulama altyazı kaynağını bu ağda arar.
+    // Local IPv4 address of the TV (preferring wired), or null if unavailable.
     localAddress: function (callback) {
       var done = false;
       function finish(ip) {
@@ -139,7 +139,7 @@
           finish(wired.ipAddress || wifi.ipAddress || null);
         };
         bridge.call('luna://com.webos.service.connectionmanager/getStatus', '{}');
-        // Köprü nesnesi çöpe gitmesin diye geri çağrı gelene kadar tutulur.
+        // Retain request reference until callback completes.
         window.__netBridge = bridge;
         setTimeout(function () { finish(null); }, 2000);
       } catch (e) {

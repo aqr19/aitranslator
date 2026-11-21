@@ -1,14 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// PSN girişiyle Remote Play kaydı için gereken hesap kimliğini alır.
-// Akış ve istemci bilgileri chiaki-ng'den; Windows'taki GameTranslator.RemotePlay/PsnAccount.cs ile aynı.
+// Retrieves the account ID required for Remote Play registration via PSN sign-in.
+// Stream and client metadata aligned with chiaki-ng and PsnAccount.
 import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
-class PsnException implements Exception {
-  PsnException(this.message);
+const _oauthHost = 'https://ca.account.sony.com/api/authz/v3/oauth';
+const _redirectUri = 'com.playstation.PlayStationApp://redirect';
+const _clientId = '09515159-7237-4370-9b40-3806e674c883';
+const _scope = 'psn:clientapp';
+const _userAgent = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36';
+const _clientVersion = '24.7.0';
+const _platform = 'Android';
+const _npClientId = 'ba495a24-818c-472b-b169-199ab4fa9a75';
+const _npClientSecret = '9d8d16f2-6d3c-4f13-8673-6a622e739666';
 
+class PsnException implements Exception {
+  const PsnException(this.message);
   final String message;
 
   @override
@@ -16,120 +25,134 @@ class PsnException implements Exception {
 }
 
 class PsnAccount {
-  static const clientId = 'ba495a24-818c-472b-b12d-ff231c1b5745';
-  static const clientSecret = 'mvaiZkRsAsI1IBkY';
-  static const tokenUrl = 'https://auth.api.sonyentertainmentnetwork.com/2.0/oauth/token';
-  static const scope =
-      'psn:clientapp referenceDataService:countryConfig.read pushNotification:webSocket.desktop.connect sessionManager:remotePlaySession.system.update';
-  static const redirectPrefix = 'https://remoteplay.dl.playstation.net/remoteplay/redirect';
-
-  /// Uygulama içi tarayıcıda açılacak Sony giriş sayfası.
-  static final Uri authorizeUrl = Uri.parse('https://auth.api.sonyentertainmentnetwork.com/2.0/oauth/authorize?${query({
-        'service_entity': 'urn:service-entity:psn',
+  /// Sony sign-in URL opened in the in-app browser.
+  static Uri get authorizeUrl => Uri.parse(_oauthHost).replace(queryParameters: const {
         'response_type': 'code',
-        'client_id': clientId,
-        'redirect_uri': redirectPrefix,
-        'scope': scope,
-        'request_locale': 'en_US',
+        'client_id': _clientId,
+        'redirect_uri': _redirectUri,
+        'scope': _scope,
+        'access_type': 'offline',
+        'service_entity': 'urn:service-entity:psn',
         'ui': 'pr',
-        'service_logo': 'ps',
-        'layout_type': 'popup',
-        'smcid': 'remoteplay',
-        'prompt': 'always',
-        'PlatformPrivacyWs1': 'minimal',
-      })}');
+        'elements': 'all',
+        'prompt': 'login',
+      });
 
-  static bool isRedirect(String url) => url.startsWith(redirectPrefix);
+  static bool isRedirect(String url) => url.startsWith(_redirectUri) || Uri.tryParse(url)?.scheme == 'com.playstation.playstationapp';
 
-  /// Giriş bitince tarayıcının gittiği yönlendirme adresinden tek kullanımlık kod.
-  static String? codeFromRedirect(String url) => isRedirect(url) ? Uri.parse(url).queryParameters['code'] : null;
+  /// One-time authorization code extracted from the redirect URL after sign-in.
+  static String? codeFromRedirect(String url) => Uri.tryParse(url)?.queryParameters['code'];
 
-  /// Sony girişi tamamlamadıysa yönlendirmedeki hata (ör. "access_denied: ..."); yoksa null.
+  /// Error parameter from redirect URL if sign-in did not complete, or null.
   static String? errorFromRedirect(String url) {
-    if (!isRedirect(url)) return null;
-    final parameters = Uri.parse(url).queryParameters;
-    final error = parameters['error'];
+    final uri = Uri.tryParse(url);
+    final error = uri?.queryParameters['error'];
     if (error == null || error.isEmpty) return null;
-    final description = parameters['error_description'];
-    return description == null || description.isEmpty ? error : '$error: $description';
+    final desc = uri?.queryParameters['error_description'];
+    return desc != null && desc.isNotEmpty ? '$error: $desc' : error;
   }
 
-  /// Kodu token'a, token'ı hesap kimliğine (8 bayt) çevirir. Token saklanmaz.
-  static Future<Uint8List> accountId(String code, {http.Client? client}) async {
-    final own = client == null;
-    final c = client ?? http.Client();
-    try {
-      final auth = 'Basic ${base64Encode(utf8.encode('$clientId:$clientSecret'))}';
-      final token = await c
-          .post(Uri.parse(tokenUrl),
-              headers: {'Authorization': auth, 'Content-Type': 'application/x-www-form-urlencoded'},
-              body: query({'grant_type': 'authorization_code', 'code': code, 'scope': scope, 'redirect_uri': redirectPrefix}))
-          .timeout(const Duration(seconds: 30));
-      final tokenJson = _object(token.body);
-      final accessToken = tokenJson?['access_token'];
-      if (token.statusCode != 200 || accessToken is! String) {
-        throw PsnException('Sony girişi kabul etmedi (HTTP ${token.statusCode})${_sonyError(tokenJson)}');
-      }
-      final info = await c
-          .get(Uri.parse('$tokenUrl/${Uri.encodeComponent(accessToken)}'), headers: {'Authorization': auth})
-          .timeout(const Duration(seconds: 30));
-      final userId = _object(info.body)?['user_id'];
-      final bytes = userId == null ? null : accountIdBytes('$userId');
-      if (info.statusCode != 200 || bytes == null) throw PsnException('Hesap kimliği alınamadı (HTTP ${info.statusCode})');
-      return bytes;
-    } on PsnException {
-      rethrow;
-    } catch (error) {
-      throw PsnException('Sony\'ye ulaşılamadı: $error');
-    } finally {
-      if (own) c.close();
+  /// Exchanges the code for a token and resolves the 8-byte account ID without storing the token.
+  static Future<Uint8List> accountId(String code) async {
+    final tokenResponse = await _postToken(code);
+    final accessToken = tokenResponse['access_token'] as String?;
+    if (accessToken == null || accessToken.isEmpty) {
+      throw PsnException('لم يتم استلام رمز الوصول من Sony${_sonyError(tokenResponse)}');
     }
+
+    final userId = await _fetchUserId(accessToken);
+    return accountIdFromDecimal(userId);
   }
 
-  /// Ondalık `user_id`'yi 8 baytlık little-endian dizisine çevirir.
-  static Uint8List? accountIdBytes(String userId) {
-    final value = BigInt.tryParse(userId);
-    if (value == null || value.isNegative || value.bitLength > 64) return null;
+  static Future> _postToken(String code) async {
+    final basicAuth = 'Basic ${base64Encode(utf8.encode('$_npClientId:$_npClientSecret'))}';
+    final http.Response token;
+    try {
+      token = await http.post(
+        Uri.parse('$_oauthHost/token'),
+        headers: {
+          'Authorization': basicAuth,
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'User-Agent': _userAgent,
+          'X-PSN-APP-VER': _clientVersion,
+          'X-PSN-PLATFORM': _platform,
+          'X-PSN-CLIENT-ID': _npClientId,
+        },
+        body: {
+          'grant_type': 'authorization_code',
+          'code': code,
+          'redirect_uri': _redirectUri,
+          'token_format': 'jwt',
+        },
+      );
+    } catch (error) {
+      throw PsnException('تعذر الاتصال بـ Sony: $error');
+    }
+
+    final tokenJson = _decodeObject(token.body);
+    if (token.statusCode != 200) {
+      throw PsnException('رفضت Sony تسجيل الدخول (HTTP ${token.statusCode})${_sonyError(tokenJson)}');
+    }
+    return tokenJson;
+  }
+
+  static Future<String> _fetchUserId(String accessToken) async {
+    final http.Response info;
+    try {
+      info = await http.get(
+        Uri.parse('https://authz.np.playstation.com/v1/users/me'),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'User-Agent': _userAgent,
+        },
+      );
+    } catch (error) {
+      throw PsnException('تعذر الاتصال بـ Sony: $error');
+    }
+
+    final infoJson = _decodeObject(info.body);
+    if (info.statusCode != 200) {
+      throw PsnException('تعذر الحصول على معرّف الحساب (HTTP ${info.statusCode})${_sonyError(infoJson)}');
+    }
+    final userId = (infoJson['userId'] ?? infoJson['account_id'])?.toString().trim();
+    if (userId == null || userId.isEmpty) {
+      throw const PsnException('لم يُعثر على معرّف المستخدم في استجابة Sony.');
+    }
+    return userId;
+  }
+
+  /// Converts decimal `user_id` into an 8-byte little-endian byte list.
+  static Uint8List accountIdFromDecimal(String userId) {
+    final value = BigInt.tryParse(userId.trim());
+    if (value == null || value <= BigInt.zero || value >= (BigInt.one << 64)) {
+      throw const PsnException('معرّف حساب PSN غير صالح.');
+    }
     final bytes = Uint8List(8);
-    var rest = value;
+    var current = value;
     for (var i = 0; i < 8; i++) {
-      bytes[i] = (rest & BigInt.from(0xff)).toInt();
-      rest = rest >> 8;
+      bytes[i] = (current & BigInt.from(0xff)).toInt();
+      current = current >> 8;
     }
     return bytes;
   }
 
-  static Map<String, dynamic>? _object(String body) {
+  static Map<String, dynamic> _decodeObject(String body) {
+    if (body.trim().isEmpty) return const {};
     try {
-      final json = jsonDecode(body);
-      return json is Map<String, dynamic> ? json : null;
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) return decoded.map((k, v) => MapEntry(k.toString(), v));
+      return const {};
     } on FormatException {
-      return null;
+      return const {};
     }
   }
 
-  static String _sonyError(Map<String, dynamic>? json) {
-    final error = json?['error'];
-    if (error == null) return '';
-    final description = json?['error_description'];
-    return description == null ? ': $error' : ': $error: $description';
-  }
-
-  /// İzinli karakterler (":" ve "/" dahil) olduğu gibi kalır; Sony'nin beklediği biçim.
-  static String query(Map<String, String> items) => items.entries.map((e) => '${_encode(e.key)}=${_encode(e.value)}').join('&');
-
-  static String _encode(String text) {
-    const allowed = "-._~:/?@!\$'()*,;";
-    final out = StringBuffer();
-    for (final byte in utf8.encode(text)) {
-      final c = String.fromCharCode(byte);
-      final alphanumeric = (byte >= 0x30 && byte <= 0x39) || (byte >= 0x41 && byte <= 0x5a) || (byte >= 0x61 && byte <= 0x7a);
-      if (alphanumeric || allowed.contains(c)) {
-        out.write(c);
-      } else {
-        out.write('%${byte.toRadixString(16).toUpperCase().padLeft(2, '0')}');
-      }
-    }
-    return out.toString();
+  /// Preserves characters allowed by Sony's expected error format (including ':' and '/').
+  static String _sonyError(Map<String, dynamic> json) {
+    final err = (json['error'] ?? json['error_code'])?.toString().trim();
+    final desc = json['error_description']?.toString().trim();
+    if (err == null || err.isEmpty) return '';
+    return desc != null && desc.isNotEmpty ? ' ($err: $desc)' : ' ($err)';
   }
 }

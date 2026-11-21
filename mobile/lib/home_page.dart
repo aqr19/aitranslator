@@ -11,8 +11,8 @@ import 'settings_page.dart';
 import 'tv_install_page.dart';
 import 'ui.dart';
 
-/// Ana ekran: altta yüzen cam sekme çubuğu ve üç sekme (Çeviri, Rehber, Ayarlar).
-/// Çeviri sekmesi: başlat/durdur, PS5 · telefon · TV durumu, canlı önizleme ve son çeviri.
+/// Home screen: floating glass tab bar and three tabs (Translation, Guide, Settings).
+/// Translation tab: start/stop, PS5 · phone · TV status, live preview, and latest translation.
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.setup, required this.onSetupChanged});
 
@@ -25,9 +25,9 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
   static const tabs = [
-    (CupertinoIcons.captions_bubble, CupertinoIcons.captions_bubble_fill, 'ترجمة'),
-    (CupertinoIcons.book, CupertinoIcons.book_fill, 'Rehber'),
-    (CupertinoIcons.gear_alt, CupertinoIcons.gear_alt_fill, 'Ayarlar'),
+    (CupertinoIcons.captions_bubble, CupertinoIcons.captions_bubble_fill, 'الترجمة'),
+    (CupertinoIcons.book, CupertinoIcons.book_fill, 'الدليل'),
+    (CupertinoIcons.gear_alt, CupertinoIcons.gear_alt_fill, 'الإعدادات'),
   ];
 
   int tab = 0;
@@ -38,10 +38,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   Uint8List? preview;
   late final AnimationController pulse;
 
-  /// Görüntü akarken TV'nin bağlanmasının beklenmeye başladığı an; TV bağlıyken ya da çeviri kapalıyken null.
+  /// Timestamp when streaming started waiting for TV connection; null when connected or stopped.
   DateTime? tvWaitingSince;
 
-  /// TV uygulaması telefonu genelde birkaç saniyede bulur; bu kadar beklendiyse bir sorun vardır.
+  /// TV app normally connects within a few seconds; exceeding this indicates a potential issue.
   static const tvWaitLimit = Duration(seconds: 25);
 
   bool get tvStuck => tvWaitingSince != null && DateTime.now().difference(tvWaitingSince!) > tvWaitLimit;
@@ -59,7 +59,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       });
     });
     loadSettings();
-    // Önizleme yalnız görüntü akarken yenilenir. Aynı sayaç, TV bekleme süresi dolunca uyarının değişmesini sağlar.
+    // Refresh preview only while streaming; also updates the TV waiting warning after timeout.
     previewTimer = Timer.periodic(const Duration(seconds: 2), (_) {
       refreshPreview();
       if (mounted && tvWaitingSince != null) setState(() {});
@@ -88,7 +88,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     if (mounted && image != null) setState(() => preview = image);
   }
 
-  /// Sekme değişir; Çeviri'ye dönülünce bölge çerçevesi güncel ayarlarla çizilsin diye ayarlar yeniden okunur.
+  /// Switch tab and reload settings when returning to Translation so region overlays stay current.
   void selectTab(int index) {
     setState(() => tab = index);
     if (index == 0) loadSettings();
@@ -105,18 +105,18 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   Future<void> sendTest() async {
     await Bridge.testSubtitle();
     if (!mounted) return;
-    toast(context, state.tvClients > 0 ? 'تم إرسال الترجمة التجريبية إلى TV\'.' : 'التلفزيون غير متصل. أولاً، افتح GameTranslator\'على التلفاز\'.');
+    toast(context, state.tvClients > 0 ? 'تم إرسال الترجمة التجريبية إلى التلفاز.' : 'التلفاز غير متصل. افتح GameTranslator على التلفاز أولاً.');
   }
 
   (String, String, Color) get headline => switch (state.phase) {
-        'streaming' => ('الترجمة قيد التشغيل', 'يمكنك إيقاف تشغيل الشاشة. تستمر الترجمة في الخلفية.', Tokens.success),
-        'starting' => ('جارٍ الإطلاق…', 'يستغرق بضع ثوان.', Tokens.warning),
-        'connecting' => ('جارٍ الاتصال بجهاز PS5\'...', 'يجب أن يكون جهاز PS5 قيد التشغيل وعلى نفس شبكة Wi-Fi\'.', Tokens.warning),
-        'waking' => ('PS5 يستيقظ…', 'قد يستغرق الأمر ما يصل إلى دقيقة للخروج من وضع السكون.', Tokens.warning),
-        'reconnecting' => ('جارٍ إعادة الاتصال…', 'انقطع الاتصال، حاول مرة أخرى.', Tokens.warning),
-        'stopping' => ('Durduruluyor…', '', Tokens.textSecondary),
-        'failed' => ('فشل في التهيئة', 'انقر للمحاولة مرة أخرى.', Tokens.danger),
-        _ => ('الترجمة معطلة', 'انقر للبدء.', Tokens.textSecondary),
+        'streaming' => ('الترجمة قيد التشغيل', 'يمكنك إطفاء شاشة الهاتف؛ ستستمر الترجمة في الخلفية.', Tokens.success),
+        'starting' => ('جارٍ البدء…', 'يستغرق بضع ثوانٍ.', Tokens.warning),
+        'connecting' => ('جارٍ الاتصال بـ PS5…', 'تأكد أن جهاز PS5 يعمل وعلى نفس شبكة Wi-Fi.', Tokens.warning),
+        'waking' => ('PS5 يستيقظ…', 'قد يستغرق الخروج من وضع السكون حتى دقيقة.', Tokens.warning),
+        'reconnecting' => ('جارٍ إعادة الاتصال…', 'انقطع الاتصال، جارٍ المحاولة مجدداً.', Tokens.warning),
+        'stopping' => ('جارٍ الإيقاف…', '', Tokens.textSecondary),
+        'failed' => ('تعذّر التشغيل', 'اضغط لإعادة المحاولة.', Tokens.danger),
+        _ => ('الترجمة متوقفة', 'اضغط للبدء.', Tokens.textSecondary),
       };
 
   List<FlowNode> get nodes {
@@ -130,23 +130,23 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         detail: streaming
             ? 'متصل'
             : switch (state.phase) {
-                'waking' => 'الاستيقاظ',
-                'starting' || 'connecting' || 'reconnecting' => 'ربط',
-                _ => 'متطابق',
+                'waking' => 'يستيقظ',
+                'starting' || 'connecting' || 'reconnecting' => 'يتصل',
+                _ => 'مقترن',
               },
         color: streaming ? Tokens.success : (connecting ? Tokens.warning : Tokens.textSecondary),
         busy: connecting,
       ),
       FlowNode(
         icon: CupertinoIcons.device_phone_portrait,
-        label: 'Telefon',
-        detail: address == null ? 'لا يوجد واي فاي' : (streaming ? 'ترجمة' : 'مستعد'),
+        label: 'الهاتف',
+        detail: address == null ? 'لا يوجد Wi-Fi' : (streaming ? 'يُترجم' : 'جاهز'),
         color: address == null ? Tokens.danger : (streaming ? Tokens.accent : Tokens.textSecondary),
       ),
       FlowNode(
         icon: CupertinoIcons.tv_fill,
-        label: 'TV',
-        detail: tvOn ? 'متصل' : (active ? 'Bekleniyor' : 'غير متصل'),
+        label: 'التلفاز',
+        detail: tvOn ? 'متصل' : (active ? 'بانتظار الاتصال' : 'غير متصل'),
         color: tvOn ? Tokens.success : (active ? Tokens.warning : Tokens.textSecondary),
       ),
     ];
@@ -227,8 +227,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           const Notice(
             icon: CupertinoIcons.wifi_slash,
             color: Tokens.danger,
-            title: 'لا يوجد اتصال بالواي فاي',
-            text: 'يجب أن يكون الهاتف متصلاً بنفس شبكة Wi-Fi مثل جهاز PS5 والتلفزيون.',
+            title: 'لا يوجد اتصال Wi-Fi',
+            text: 'يجب أن يكون الهاتف متصلاً بنفس شبكة Wi-Fi مع جهاز PS5 والتلفاز.',
           ),
         ],
         if (streaming && !tvOn && !tvStuck) ...[
@@ -236,8 +236,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           const Notice(
             icon: CupertinoIcons.tv,
             color: Tokens.warning,
-            title: 'افتح GameTranslator\'على التلفاز\'',
-            text: 'يجد تطبيق التلفزيون الهاتف على الشبكة نفسها؛ يستغرق الأمر بضع ثوانٍ للاتصال بعد تشغيله.',
+            title: 'افتح GameTranslator على التلفاز',
+            text: 'سيعثر تطبيق التلفاز على الهاتف تلقائياً عبر الشبكة خلال ثوانٍ من فتحه.',
           ),
         ],
         if (streaming && !tvOn && tvStuck) ...[
@@ -245,40 +245,40 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           Notice(
             icon: CupertinoIcons.exclamationmark_triangle_fill,
             color: Tokens.warning,
-            title: 'التلفزيون لا يزال غير متصل',
-            text: 'إذا كان تطبيق التلفزيون متصلاً بالكمبيوتر من قبل، فقد يكون عالقًا في العنوان القديم.'
-                'يؤدي مسح بيانات التطبيق مرة واحدة على TV\' إلى إصلاح هذه المشكلة.',
+            title: 'التلفاز لم يتصل بعد',
+            text: 'إذا كان تطبيق التلفاز متصلاً بحاسوب سابقاً فقد يكون عالقاً على عنوان قديم. '
+                'مسح بيانات تطبيق التلفاز مرة واحدة يحل المشكلة.',
             action: TextButton(
               style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32)),
               onPressed: () => Navigator.of(context).push(appleRoute<void>((_) => const TvHelpPage())),
-              child: const Text('تظهر خطوة بخطوة', style: TextStyle(fontWeight: FontWeight.w600)),
+              child: const Text('عرض الخطوات', style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ),
         ],
         if (active) ...[
-          const GroupHeader('CANLI'),
+          const GroupHeader('مباشر'),
           _LiveCard(state: state, preview: streaming ? preview : null, settings: settings),
           const SizedBox(height: 12),
           Group(
             inset: 60,
             children: [
-              Cell(icon: CupertinoIcons.captions_bubble_fill, iconColor: Tokens.indigo, title: 'إرسال ترجمات اختبارية إلى TV\'', onTap: sendTest),
-              Cell(icon: CupertinoIcons.crop, iconColor: Tokens.teal, title: 'تعيين منطقة الترجمة', chevron: true, onTap: () => selectTab(2)),
+              Cell(icon: CupertinoIcons.captions_bubble_fill, iconColor: Tokens.indigo, title: 'إرسال ترجمة تجريبية للتلفاز', onTap: sendTest),
+              Cell(icon: CupertinoIcons.crop, iconColor: Tokens.teal, title: 'تحديد منطقة الترجمة', chevron: true, onTap: () => selectTab(2)),
             ],
           ),
         ] else ...[
-          const GroupHeader('كيفية الاستخدام'),
+          const GroupHeader('طريقة الاستخدام'),
           Group(
             inset: 60,
             children: [
-              const _HowStep(number: 1, text: 'قم بتشغيل الترجمة في اللعبة.'),
-              const _HowStep(number: 2, text: 'ابدأ الترجمة بالزر أعلاه.'),
-              const _HowStep(number: 3, text: 'افتح GameTranslator\'on TV\'؛ تظهر الترجمة أعلى اللعبة.'),
+              const _HowStep(number: 1, text: 'فعّل الترجمة داخل إعدادات اللعبة.'),
+              const _HowStep(number: 2, text: 'ابدأ الترجمة من الزر بالأعلى.'),
+              const _HowStep(number: 3, text: 'افتح GameTranslator على التلفاز لتظهر الترجمة فوق اللعبة.'),
               Cell(
                 icon: CupertinoIcons.tv_fill,
                 iconColor: Tokens.purple,
-                title: 'تثبيت تطبيق التلفزيون',
-                subtitle: 'إذا لم يكن هناك GameTranslator على جهاز التلفزيون الخاص بك\'',
+                title: 'تثبيت تطبيق التلفاز',
+                subtitle: 'إذا لم يكن GameTranslator مثبتاً على التلفاز',
                 chevron: true,
                 onTap: () => Navigator.of(context).push(appleRoute<void>((_) => const TvInstallPage())),
               ),
@@ -291,7 +291,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 }
 
-/// Ortadaki büyük başlat/durdur düğmesi: cam bir halkanın içinde, sol üstten ışık alan küre.
+/// Center power button inside a glass ring.
 class _PowerButton extends StatelessWidget {
   const _PowerButton({required this.phase, required this.active, required this.color, required this.pulse, required this.onTap});
 
@@ -312,11 +312,11 @@ class _PowerButton extends StatelessWidget {
     final tone = idle ? (phase == 'failed' ? Tokens.danger : Tokens.accent) : color;
     return Semantics(
       button: true,
-      label: active ? 'وقف الترجمة' : 'ابدأ الترجمة',
+      label: active ? 'إيقاف الترجمة' : 'بدء الترجمة',
       child: AnimatedBuilder(
         animation: pulse,
         builder: (context, child) {
-          // Kapalıyken ve çeviri açıkken ışık yavaşça nefes alır; bağlanırken sabit kalır.
+          // Gentle breathing glow when idle or streaming; steady while connecting.
           final t = busy ? 0.3 : Curves.easeInOut.transform(pulse.value);
           return Container(
             width: outer,
@@ -376,7 +376,7 @@ class _PowerButton extends StatelessWidget {
   }
 }
 
-/// "Nasıl kullanılır" listesindeki numaralı satır.
+/// Numbered step row in the "How to use" section.
 class _HowStep extends StatelessWidget {
   const _HowStep({required this.number, required this.text});
 
@@ -404,7 +404,7 @@ class _HowStep extends StatelessWidget {
   }
 }
 
-/// Çeviri açıkken: oyun görüntüsü, altyazı bölgesi ve son çeviri.
+/// Live card while streaming: game frame, subtitle region box, and latest translation.
 class _LiveCard extends StatelessWidget {
   const _LiveCard({required this.state, required this.preview, required this.settings});
 
@@ -434,7 +434,7 @@ class _LiveCard extends StatelessWidget {
                   children: [
                     const CupertinoActivityIndicator(radius: 12),
                     const SizedBox(height: 12),
-                    Text(streaming ? 'جارٍ إعداد المعاينة…' : 'صورة PS5 متوقعة…', style: Txt.footnote.copyWith(color: Tokens.textSecondary)),
+                    Text(streaming ? 'جارٍ تجهيز المعاينة…' : 'بانتظار صورة PS5…', style: Txt.footnote.copyWith(color: Tokens.textSecondary)),
                   ],
                 ),
               ),
@@ -446,8 +446,8 @@ class _LiveCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Expanded(child: Text('أحدث الترجمة', style: Txt.headline)),
-                    if (streaming) Pill(text: '${state.translated} الصف', color: Tokens.accent),
+                    const Expanded(child: Text('آخر ترجمة', style: Txt.headline)),
+                    if (streaming) Pill(text: '${state.translated} سطر', color: Tokens.accent),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -457,14 +457,14 @@ class _LiveCard extends StatelessWidget {
                   Text(state.lastSource.replaceAll('\n', ' '), style: Txt.subhead.copyWith(color: Tokens.textSecondary)),
                   if (state.packHits > 0 && state.packGame.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    Text('تم استخدام حزمة ${state.packGame} · خط ${state.packHits} من الحزمة',
+                    Text('حزمة ${state.packGame} · ${state.packHits} سطر من الحزمة',
                         style: Txt.footnote.copyWith(color: Tokens.success)),
                   ],
                 ] else
-                  Text('عندما تظهر الترجمة في اللعبة، تظهر الترجمة هنا وعلى TV\'.', style: Txt.subhead.copyWith(color: Tokens.textSecondary)),
+                  Text('عند ظهور الترجمة في اللعبة ستظهر هنا وعلى التلفاز.', style: Txt.subhead.copyWith(color: Tokens.textSecondary)),
                 if (streaming) ...[
                   const SizedBox(height: 14),
-                  // Bölge doğru yerde mi ve yazı okunuyor mu, buradan anlaşılır.
+                  // Shows raw OCR text to verify region placement and readability.
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
@@ -472,10 +472,10 @@ class _LiveCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('اقرأ في الإطار', style: Txt.caption.copyWith(color: Tokens.textSecondary, fontWeight: FontWeight.w600, letterSpacing: 0.4)),
+                        Text('النص المقروء داخل الإطار', style: Txt.caption.copyWith(color: Tokens.textSecondary, fontWeight: FontWeight.w600, letterSpacing: 0.4)),
                         const SizedBox(height: 3),
                         Text(
-                          state.lastRead.isEmpty ? 'لا توجد مشاركات في الوقت الراهن.' : state.lastRead.replaceAll('\n', ' '),
+                          state.lastRead.isEmpty ? 'لا يوجد نص مقروء حالياً.' : state.lastRead.replaceAll('\n', ' '),
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           style: Txt.footnote.copyWith(fontSize: 13.5),
@@ -493,7 +493,7 @@ class _LiveCard extends StatelessWidget {
   }
 }
 
-/// Oyun görüntüsü, üstünde altyazının arandığı bölgenin çerçevesi ve (verildiyse) TV'deki gibi çeviri.
+/// Game frame overlay with subtitle region rectangle and optional live translation preview.
 class RegionPreview extends StatelessWidget {
   const RegionPreview({super.key, required this.image, required this.settings, this.subtitle});
 

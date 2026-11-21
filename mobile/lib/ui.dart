@@ -17,16 +17,11 @@ import 'main.dart';
 
 export 'package:cupertino_ui/cupertino_ui.dart'
     show CupertinoActivityIndicator, CupertinoIcons, CupertinoSlider, CupertinoSlidingSegmentedControl, CupertinoSwitch;
-
 export 'flow.dart';
 
-/// Ekranlar arasında ortak kullanılan parçalar: Apple'ın tasarım dilindeki (iOS, Liquid Glass) yüzeyler,
-/// gruplu listeler, başlıklar, düğmeler ve pencereler.
-
-// ---------------------------------------------------------------------------------------------- zemin ve cam
-
-/// Bütün ekranların arkasındaki zemin: koyu taban üstünde yumuşak, renkli ışık lekeleri. Cam yüzeyler bu
-/// ışığı geçirdiği için derinlik duygusu verir. Bulanıklık filtresi kullanılmaz; lekeler geçişli boyanır.
+/// Shared glass UI primitives: translucent surfaces, grouped lists, headers, buttons, and sheets.
+// ---------------------------------------------------------------------------------------------- Background & glass
+/// Ambient dark background with soft radial color blobs behind translucent glass surfaces.
 class GlassBackground extends StatelessWidget {
   const GlassBackground({super.key});
 
@@ -51,19 +46,17 @@ class _BackgroundPainter extends CustomPainter {
       );
     }
 
-    blob(0.00, 0.22, 1.00, const Color(0x660A84FF)); // mavi, sol üst
-    blob(1.05, 0.50, 0.90, const Color(0x4D5E5CE6)); // çivit, sağ orta
-    blob(0.25, 1.00, 0.95, const Color(0x4032ADE6)); // camgöbeği, sol alt
-    blob(0.95, 0.05, 0.60, const Color(0x33BF5AF2)); // mor, sağ üst
+    blob(0.00, 0.22, 1.00, const Color(0x660A84FF)); // blue top-left
+    blob(1.05, 0.50, 0.90, const Color(0x4D5E5CE6)); // indigo right-mid
+    blob(0.25, 1.00, 0.95, const Color(0x4032ADE6)); // cyan bottom-left
+    blob(0.95, 0.05, 0.60, const Color(0x33BF5AF2)); // purple top-right
   }
 
   @override
   bool shouldRepaint(_BackgroundPainter old) => false;
 }
 
-/// Cam yüzey: yarı saydam, sol üstten ışık alan dolgu ve ince parlak kenar.
-/// [tint] camı renklendirir (seçili ya da etkin öğeler). [blur] yalnızca altında görüntü ya da kayan içerik olan
-/// yüzeylerde açılır: arkasını gerçekten bulandırır ama pahalıdır.
+/// Translucent glass surface with optional tint and backdrop blur.
 class Glass extends StatelessWidget {
   const Glass({super.key, required this.child, this.radius = 26, this.padding, this.tint, this.blur = false, this.clip = false});
 
@@ -104,13 +97,12 @@ class Glass extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------------------------- sayfa iskeletleri
-
-/// Geri düğmeli alt sayfa (iOS gezinme çubuğu): solda cam daire içinde geri oku, ortada başlık.
+// ---------------------------------------------------------------------------------------------- Page scaffolds
+/// Sub-page scaffold with a back button in a circular glass badge and centered title.
 class GlassScaffold extends StatelessWidget {
   const GlassScaffold({super.key, this.appBar, required this.body, this.title, this.actions});
 
-  /// Hazır bir başlık çubuğu; verilmezse ve [title] varsa iOS tarzı çubuk kurulur.
+  /// Custom app bar; if omitted and [title] is set, a default navigation bar is built.
   final PreferredSizeWidget? appBar;
   final String? title;
   final List<Widget>? actions;
@@ -147,12 +139,12 @@ class GlassBackButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GlassIconButton(
         icon: CupertinoIcons.chevron_back,
-        tooltip: 'Geri',
+        tooltip: 'رجوع',
         onTap: () => Navigator.of(context).maybePop(),
       );
 }
 
-/// Cam daire içinde ikon düğmesi (başlık çubuklarında).
+/// Circular glass icon button for navigation bars.
 class GlassIconButton extends StatelessWidget {
   const GlassIconButton({super.key, required this.icon, required this.onTap, this.tooltip, this.size = 40});
 
@@ -178,8 +170,7 @@ class GlassIconButton extends StatelessWidget {
   }
 }
 
-/// Sekme sayfası: iOS'taki gibi sola yaslı büyük başlık ve altında kayan içerik. Alt boşluk, yüzen sekme
-/// çubuğunun altında içerik kalmasın diye bırakılır.
+/// Tab page with large title and bottom clearance above the floating tab bar.
 class LargeTitleList extends StatelessWidget {
   const LargeTitleList({super.key, required this.title, required this.children, this.trailing, this.bottomSpace = 118});
 
@@ -208,7 +199,7 @@ class LargeTitleList extends StatelessWidget {
             ...children,
           ],
         ),
-        // Saat ve pil satırının arkası: içerik buradan geçerken bulanır, yazılarla karışmaz.
+        // Top status-bar blur strip so scrolling text does not clash with status icons.
         Positioned(
           top: 0,
           left: 0,
@@ -226,8 +217,7 @@ class LargeTitleList extends StatelessWidget {
   }
 }
 
-/// iOS 26'nın yüzen cam sekme çubuğu: ekranın altında, içeriğin üstünde duran hap. Seçili sekme daha parlak
-/// bir cam kapsülle ve mavi ikonla gösterilir. Altından içerik kaydığı için arkasını gerçekten bulandırır.
+/// Floating glass tab bar positioned above the bottom safe area.
 class GlassTabBar extends StatelessWidget {
   const GlassTabBar({super.key, required this.items, required this.index, required this.onTap});
 
@@ -293,9 +283,8 @@ class GlassTabBar extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------------------------- gruplu listeler
-
-/// Grup başlığı: iOS ayarlarındaki küçük, gri bölüm adı.
+// ---------------------------------------------------------------------------------------------- Grouped lists
+/// Section header label above grouped settings/cards.
 class GroupHeader extends StatelessWidget {
   const GroupHeader(this.text, {super.key});
 
@@ -308,7 +297,7 @@ class GroupHeader extends StatelessWidget {
       );
 }
 
-/// Grup altı açıklaması.
+/// Explanatory footer text below a group.
 class GroupFooter extends StatelessWidget {
   const GroupFooter(this.text, {super.key});
 
@@ -321,13 +310,13 @@ class GroupFooter extends StatelessWidget {
       );
 }
 
-/// iOS'un gruplu (inset grouped) listesi: cam bir kutu içinde, ince çizgilerle ayrılmış satırlar.
+/// Inset grouped glass container with thin dividers between rows.
 class Group extends StatelessWidget {
   const Group({super.key, required this.children, this.inset = 16});
 
   final List<Widget> children;
 
-  /// Ayraç çizgisinin soldan boşluğu: ikonlu satırlarda yazıyla hizalanır.
+  /// Left/start divider indent aligned with row text.
   final double inset;
 
   @override
@@ -347,7 +336,7 @@ class Group extends StatelessWidget {
   }
 }
 
-/// Renkli, yuvarlak köşeli kare içinde beyaz ikon: iOS ayarlarındaki satır ikonları.
+/// Rounded square icon badge used in list rows.
 class IconTile extends StatelessWidget {
   const IconTile(this.icon, this.color, {super.key, this.size = 30});
 
@@ -366,7 +355,7 @@ class IconTile extends StatelessWidget {
   }
 }
 
-/// Liste satırı: solda ikon, başlık (ve alt yazı), sağda değer, ok ya da bir denetim.
+/// List row supporting leading icon, title, subtitle, value, trailing widget, checkmark, or chevron.
 class Cell extends StatelessWidget {
   const Cell({
     super.key,
@@ -378,8 +367,8 @@ class Cell extends StatelessWidget {
     this.trailing,
     this.onTap,
     this.chevron = false,
-    this.titleColor,
     this.checked,
+    this.titleColor,
   });
 
   final IconData? icon;
@@ -387,87 +376,96 @@ class Cell extends StatelessWidget {
   final String title;
   final String? subtitle;
 
-  /// Sağdaki gri değer yazısı.
+  /// Muted label shown on the trailing side.
   final String? value;
   final Widget? trailing;
   final VoidCallback? onTap;
   final bool chevron;
-  final Color? titleColor;
 
-  /// Seçim listelerinde: true ise sağda mavi onay işareti (false ise yer tutulur).
+  /// When non-null in selection lists, shows a blue checkmark if true.
   final bool? checked;
+  final Color? titleColor;
 
   @override
   Widget build(BuildContext context) {
-    final row = Padding(
-      padding: EdgeInsets.fromLTRB(16, subtitle == null ? 12 : 10, 14, subtitle == null ? 12 : 10),
-      child: Row(
-        children: [
-          if (icon != null) ...[IconTile(icon!, iconColor), const SizedBox(width: 14)],
-          Flexible(
-            flex: value == null ? 1 : 0,
-            fit: value == null ? FlexFit.tight : FlexFit.loose,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: Txt.body.copyWith(color: titleColor)),
-                if (subtitle != null) Text(subtitle!, style: Txt.footnote.copyWith(color: Tokens.textSecondary)),
-              ],
-            ),
-          ),
-          if (value != null) ...[
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(value!, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end, style: Txt.body.copyWith(color: Tokens.textSecondary)),
-            ),
-          ],
-          if (trailing != null) ...[const SizedBox(width: 10), trailing!],
-          if (checked != null) ...[
-            const SizedBox(width: 10),
-            Icon(CupertinoIcons.checkmark_alt, size: 22, color: checked! ? Tokens.accent : Colors.transparent),
-          ],
-          if (chevron) ...[
-            const SizedBox(width: 6),
-            const Icon(CupertinoIcons.chevron_forward, size: 15, color: Color(0x4DEBEBF5)),
-          ],
-        ],
-      ),
-    );
-    if (onTap == null) return ConstrainedBox(constraints: const BoxConstraints(minHeight: 46), child: row);
+    final hasLeading = icon != null;
+    final hasTrailing = trailing != null || checked == true || value != null || chevron;
     return Material(
       color: Colors.transparent,
-      child: InkWell(onTap: onTap, child: ConstrainedBox(constraints: const BoxConstraints(minHeight: 46), child: row)),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(hasLeading ? 14 : 16, subtitle == null ? 13 : 11, hasTrailing ? 12 : 16, subtitle == null ? 13 : 11),
+          child: Row(
+            children: [
+              if (hasLeading) ...[
+                IconTile(icon!, iconColor),
+                const SizedBox(width: 14),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Txt.body.copyWith(color: titleColor ?? Tokens.textPrimary),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(subtitle!, style: Txt.footnote.copyWith(color: Tokens.textSecondary)),
+                    ],
+                  ],
+                ),
+              ),
+              if (value != null) ...[
+                const SizedBox(width: 8),
+                Text(value!, style: Txt.body.copyWith(color: Tokens.textSecondary)),
+              ],
+              if (checked == true) ...[
+                const SizedBox(width: 8),
+                const Icon(CupertinoIcons.checkmark, size: 18, color: Tokens.accent),
+              ],
+              if (trailing != null) ...[
+                const SizedBox(width: 8),
+                trailing!,
+              ],
+              if (chevron) ...[
+                const SizedBox(width: 6),
+                const Icon(CupertinoIcons.chevron_forward, size: 16, color: Color(0x66EBEBF5)),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
 
-// ---------------------------------------------------------------------------------------------- düğmeler ve etiketler
-
-/// Ana eylem düğmesi: mavi, hap biçimli (iOS'un belirgin düğmesi).
+// ---------------------------------------------------------------------------------------------- Buttons & badges
+/// Primary capsule action button.
 class GlowButton extends StatelessWidget {
-  const GlowButton({super.key, required this.onPressed, required this.label, this.icon, this.busy = false});
+  const GlowButton({super.key, required this.label, required this.onPressed, this.icon, this.busy = false});
 
-  final VoidCallback? onPressed;
   final String label;
+  final VoidCallback? onPressed;
   final IconData? icon;
   final bool busy;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: double.infinity,
       height: 52,
       child: FilledButton(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(disabledBackgroundColor: Tokens.accent.withValues(alpha: 0.5), disabledForegroundColor: Colors.white70),
+        onPressed: busy ? null : onPressed,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             if (busy)
               const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
             else if (icon != null)
               Icon(icon, size: 20),
-            if (busy || icon != null) const SizedBox(width: 8),
+            if (busy || icon != null) const SizedBox(width: 10),
             Text(label),
           ],
         ),
@@ -476,47 +474,46 @@ class GlowButton extends StatelessWidget {
   }
 }
 
-/// Renkli kenarlı bilgi kutusu: ipucu, uyarı ya da hata.
+/// Tinted callout card for tips, warnings, or errors.
 class Notice extends StatelessWidget {
-  const Notice({super.key, required this.icon, required this.text, this.color = Tokens.accent, this.title, this.action, this.compact = false});
+  const Notice({super.key, required this.icon, required this.text, this.title, this.color = Tokens.accent, this.action, this.compact = false});
 
   final IconData icon;
-  final String text;
   final String? title;
+  final String text;
   final Color color;
   final Widget? action;
 
-  /// Daha az iç boşluk ve rengiyle yazı; tek satırlık onay mesajları için.
+  /// Compact padding and color for single-line status notices.
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    return Glass(
-      radius: 18,
-      tint: color,
-      padding: EdgeInsets.symmetric(horizontal: 14, vertical: compact ? 10 : 13),
+    return Container(
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: compact ? 0.14 : 0.12),
+        borderRadius: BorderRadius.circular(compact ? 16 : 20),
+        border: Border.all(color: color.withValues(alpha: compact ? 0.35 : 0.30), width: 0.9),
+      ),
+      padding: EdgeInsets.all(compact ? 12 : 14),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: title == null ? CrossAxisAlignment.center : CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: color),
+          Icon(icon, size: compact ? 18 : 20, color: color),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (title != null) ...[
-                  Text(title!, style: Txt.subhead.copyWith(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 2),
+                  Text(title!, style: Txt.headline.copyWith(color: Tokens.textPrimary)),
+                  const SizedBox(height: 3),
                 ],
-                Text(
-                  text,
-                  style: Txt.footnote.copyWith(
-                    fontSize: 13.5,
-                    color: compact ? color : const Color(0xD9EBEBF5),
-                    fontWeight: compact ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                ),
-                if (action != null) ...[const SizedBox(height: 4), action!],
+                Text(text, style: Txt.subhead.copyWith(color: compact ? Tokens.textPrimary : Tokens.textSecondary, height: 1.4)),
+                if (action != null) ...[
+                  const SizedBox(height: 6),
+                  action!,
+                ],
               ],
             ),
           ),
@@ -526,128 +523,128 @@ class Notice extends StatelessWidget {
   }
 }
 
-/// Küçük, yuvarlak köşeli durum etiketi.
+/// Compact rounded status pill badge.
 class Pill extends StatelessWidget {
-  const Pill({super.key, required this.text, this.color = Tokens.textSecondary, this.icon});
+  const Pill({super.key, required this.text, required this.color});
 
   final String text;
   final Color color;
-  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(999)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.45), width: 0.7),
+      ),
+      child: Text(text, style: Txt.caption.copyWith(color: color, fontWeight: FontWeight.w600)),
+    );
+  }
+}
+
+/// Titled glass section card used in guides and setup steps.
+class SectionCard extends StatelessWidget {
+  const SectionCard({super.key, required this.icon, required this.title, required this.children, this.iconColor = Tokens.accent});
+
+  final IconData icon;
+  final String title;
+  final Color iconColor;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Glass(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (icon != null) ...[Icon(icon, size: 13, color: color), const SizedBox(width: 5)],
-          Text(text, style: TextStyle(color: color, fontSize: 12.5, fontWeight: FontWeight.w600)),
+          Row(
+            children: [
+              IconTile(icon, iconColor, size: 28),
+              const SizedBox(width: 10),
+              Text(title, style: Txt.headline),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...children,
         ],
       ),
     );
   }
 }
 
-/// Başlıklı cam kart (rehberdeki ve ana ekrandaki bölümler).
-class SectionCard extends StatelessWidget {
-  const SectionCard({super.key, this.icon, this.title, this.subtitle, this.trailing, required this.children, this.padding = const EdgeInsets.all(18)});
+// ---------------------------------------------------------------------------------------------- Navigation & overlays
+/// Slide-in page route supporting interactive edge swipe-back.
+PageRoute<T> appleRoute<T>(WidgetBuilder builder) => CupertinoPageRoute<T>(builder: builder);
 
-  final IconData? icon;
-  final String? title;
-  final String? subtitle;
-  final Widget? trailing;
-  final List<Widget> children;
-  final EdgeInsets padding;
-
-  @override
-  Widget build(BuildContext context) {
-    return Glass(
-      child: Padding(
-        padding: padding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (title != null)
-              Row(
-                children: [
-                  if (icon != null) ...[IconTile(icon!, Tokens.accent, size: 34), const SizedBox(width: 12)],
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(title!, style: Txt.title3),
-                        if (subtitle != null) Text(subtitle!, style: Txt.footnote.copyWith(color: Tokens.textSecondary)),
-                      ],
-                    ),
-                  ),
-                  ?trailing,
-                ],
-              ),
-            if (title != null && children.isNotEmpty) const SizedBox(height: 14),
-            ...children,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------------------------- pencereler
-
-/// iOS geçişiyle (sağdan kayarak, kenardan geri çekilebilir) sayfa açar.
-Route<T> appleRoute<T>(WidgetBuilder builder) => CupertinoPageRoute<T>(builder: builder);
-
-/// Alttan açılan seçim listesi (iOS eylem sayfası). Seçilen anahtarı döner; vazgeçilirse null.
-Future<String?> showApplePicker(BuildContext context, {required String title, required Map<String, String> options, String? selected, Map<String, String>? leading}) {
-  return showCupertinoModalPopup<String>(
+/// Bottom modal picker sheet; returns selected key or null if dismissed.
+Future<T?> showApplePicker<T>(
+  BuildContext context, {
+  required String title,
+  required Map<T, String> options,
+  T? selected,
+  Map<T, String>? leading,
+}) {
+  return showCupertinoModalPopup<T>(
     context: context,
-    builder: (context) => CupertinoActionSheet(
-      title: Text(title),
+    builder: (sheet) => CupertinoActionSheet(
+      title: Text(title, style: Txt.footnote.copyWith(fontFamily: 'IBMPlexSansArabic', color: Tokens.textSecondary)),
       actions: [
         for (final entry in options.entries)
           CupertinoActionSheetAction(
-            onPressed: () => Navigator.of(context).pop(entry.key),
+            onPressed: () => Navigator.of(sheet).pop(entry.key),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (leading?[entry.key] != null) ...[Text(leading![entry.key]!, style: const TextStyle(fontSize: 20)), const SizedBox(width: 10)],
-                Flexible(
-                  child: Text(
-                    entry.value,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: 'Inter', fontSize: 18, fontWeight: entry.key == selected ? FontWeight.w600 : FontWeight.w400),
+                if (leading?[entry.key] != null) ...[
+                  Text(leading![entry.key]!, style: const TextStyle(fontSize: 18)),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  entry.value,
+                  style: Txt.body.copyWith(
+                    fontFamily: 'IBMPlexSansArabic',
+                    color: entry.key == selected ? Tokens.accent : Tokens.textPrimary,
+                    fontWeight: entry.key == selected ? FontWeight.w600 : FontWeight.w400,
                   ),
                 ),
-                if (entry.key == selected) ...[const SizedBox(width: 8), const Icon(CupertinoIcons.checkmark_alt, size: 20)],
               ],
             ),
           ),
       ],
       cancelButton: CupertinoActionSheetAction(
         isDefaultAction: true,
-        onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Vazgeç', style: TextStyle(fontFamily: 'Inter')),
+        onPressed: () => Navigator.of(sheet).pop(),
+        child: const Text('إلغاء', style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
       ),
     ),
   );
 }
 
-/// iOS uyarı penceresi; onaylanırsa true döner.
-Future<bool> confirmApple(BuildContext context, {required String title, required String message, required String action, bool destructive = false}) async {
+/// Confirmation alert dialog; returns true if confirmed.
+Future<bool> confirmApple(
+  BuildContext context, {
+  required String title,
+  required String message,
+  required String action,
+  bool destructive = false,
+}) async {
   final result = await showCupertinoDialog<bool>(
     context: context,
-    builder: (context) => CupertinoAlertDialog(
-      title: Text(title, style: const TextStyle(fontFamily: 'Inter')),
-      content: Padding(padding: const EdgeInsets.only(top: 4), child: Text(message, style: const TextStyle(fontFamily: 'Inter', fontSize: 13.5, height: 1.35))),
+    builder: (dialog) => CupertinoAlertDialog(
+      title: Text(title, style: const TextStyle(fontFamily: 'IBMPlexSansArabic')),
+      content: Text(message, style: const TextStyle(fontFamily: 'IBMPlexSansArabic')),
       actions: [
-        CupertinoDialogAction(onPressed: () => Navigator.of(context).pop(false), child: const Text('Vazgeç', style: TextStyle(fontFamily: 'Inter'))),
+        CupertinoDialogAction(
+          onPressed: () => Navigator.of(dialog).pop(false),
+          child: const Text('إلغاء', style: TextStyle(fontFamily: 'IBMPlexSansArabic')),
+        ),
         CupertinoDialogAction(
           isDestructiveAction: destructive,
-          isDefaultAction: !destructive,
-          onPressed: () => Navigator.of(context).pop(true),
-          child: Text(action, style: const TextStyle(fontFamily: 'Inter')),
+          onPressed: () => Navigator.of(dialog).pop(true),
+          child: Text(action, style: const TextStyle(fontFamily: 'IBMPlexSansArabic')),
         ),
       ],
     ),
@@ -655,22 +652,19 @@ Future<bool> confirmApple(BuildContext context, {required String title, required
   return result ?? false;
 }
 
-/// Ekranın altında kısa süre görünen bildirim.
-void toast(BuildContext context, String text) {
-  ScaffoldMessenger.of(context)
+/// Brief floating toast banner at the bottom of the screen.
+void toast(BuildContext context, String message) {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  if (messenger == null) return;
+  messenger
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(
-      content: Text(text, textAlign: TextAlign.center),
-      margin: const EdgeInsets.fromLTRB(24, 0, 24, 96),
-      duration: const Duration(seconds: 3),
-    ));
+    ..showSnackBar(SnackBar(content: Text(message, textAlign: TextAlign.center)));
 }
 
-// ---------------------------------------------------------------------------------------------- logo ve açılış
-
-/// Uygulama simgesi; iOS simgeleri gibi yumuşak köşeli ve hafif gölgeli.
+// ---------------------------------------------------------------------------------------------- Logo & splash
+/// App icon mark with rounded corners and subtle glow.
 class GtLogo extends StatelessWidget {
-  const GtLogo({super.key, this.size = 96, this.glow = true});
+  const GtLogo({super.key, this.size = 64, this.glow = true});
 
   final double size;
   final bool glow;
@@ -680,111 +674,114 @@ class GtLogo extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: glow
-          ? BoxDecoration(
-              borderRadius: BorderRadius.circular(size * 0.23),
-              boxShadow: [BoxShadow(color: Tokens.accent.withValues(alpha: 0.35), blurRadius: size * 0.5, offset: Offset(0, size * 0.08))],
-            )
-          : null,
-      child: Image.asset('assets/logo.png', width: size, height: size, filterQuality: FilterQuality.medium),
-    );
-  }
-}
-
-/// Açılış ekranı. Sistemin açılış ekranındaki simgeyle aynı yerde başlar; simgenin etrafında ışık halkaları
-/// yayılır, altında ad ve slogan belirir. Kayıtlar okunurken ve kısa bir süre boyunca gösterilir.
-class SplashView extends StatefulWidget {
-  const SplashView({super.key});
-
-  /// Animasyonun tamamlanması için gereken en kısa süre.
-  static const minimum = Duration(milliseconds: 1900);
-
-  @override
-  State<SplashView> createState() => _SplashViewState();
-}
-
-class _SplashViewState extends State<SplashView> with TickerProviderStateMixin {
-  late final AnimationController intro = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..forward();
-  late final AnimationController rings = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200))..repeat();
-
-  @override
-  void dispose() {
-    intro.dispose();
-    rings.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final logo = CurvedAnimation(parent: intro, curve: const Interval(0, 0.5, curve: Curves.easeOutBack));
-    final name = CurvedAnimation(parent: intro, curve: const Interval(0.3, 0.75, curve: Curves.easeOutCubic));
-    final tagline = CurvedAnimation(parent: intro, curve: const Interval(0.55, 1, curve: Curves.easeOutCubic));
-    return GlassScaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 260,
-              height: 260,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  AnimatedBuilder(
-                    animation: rings,
-                    builder: (context, _) => CustomPaint(size: const Size(260, 260), painter: _RingsPainter(rings.value, intro.value)),
-                  ),
-                  ScaleTransition(
-                    scale: Tween<double>(begin: 0.82, end: 1).animate(logo),
-                    child: const GtLogo(size: 124),
-                  ),
-                ],
-              ),
-            ),
-            FadeTransition(
-              opacity: name,
-              child: SlideTransition(
-                position: Tween<Offset>(begin: const Offset(0, 0.35), end: Offset.zero).animate(name),
-                child: const Text('GameTranslator', style: Txt.largeTitle),
-              ),
-            ),
-            const SizedBox(height: 6),
-            FadeTransition(
-              opacity: tagline,
-              child: Text('Oyunu kendi dilinde oyna', style: Txt.body.copyWith(color: Tokens.textSecondary)),
-            ),
-            const SizedBox(height: 60),
-          ],
-        ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(size * 0.24),
+        boxShadow: glow
+            ? [
+                BoxShadow(color: Tokens.accent.withValues(alpha: 0.45), blurRadius: size * 0.38, spreadRadius: 1),
+                BoxShadow(color: Tokens.purple.withValues(alpha: 0.25), blurRadius: size * 0.55),
+              ]
+            : null,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size * 0.24),
+        child: Image.asset('assets/logo.png', fit: BoxFit.cover),
       ),
     );
   }
 }
 
-/// Logonun etrafında dışa doğru yayılıp sönen ışık halkaları.
-class _RingsPainter extends CustomPainter {
-  _RingsPainter(this.phase, this.strength);
+/// Splash screen shown during initial startup.
+class SplashView extends StatefulWidget {
+  const SplashView({super.key});
 
-  final double phase;
-  final double strength;
+  /// Minimum duration so the launch animation completes cleanly.
+  static const minimum = Duration(milliseconds: 900);
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    for (var i = 0; i < 3; i++) {
-      final t = (phase + i / 3) % 1;
-      final radius = 62 + 66 * t;
-      canvas.drawCircle(
-        center,
-        radius,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.6 * (1 - t) + 0.5
-          ..color = Colors.white.withValues(alpha: (1 - t) * 0.35 * strength),
-      );
-    }
+  State<SplashView> createState() => _SplashViewState();
+}
+
+class _SplashViewState extends State<SplashView> with SingleTickerProviderStateMixin {
+  late final AnimationController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))..forward();
   }
 
   @override
-  bool shouldRepaint(_RingsPainter old) => old.phase != phase || old.strength != strength;
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Tokens.background,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const GlassBackground(),
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _PulseRings(controller: controller, child: const GtLogo(size: 96)),
+                const SizedBox(height: 22),
+                FadeTransition(
+                  opacity: CurvedAnimation(parent: controller, curve: const Interval(0.25, 0.8)),
+                  child: Column(
+                    children: [
+                      const Text('GameTranslator', style: Txt.title1),
+                      const SizedBox(height: 6),
+                      Text('ترجمة فورية للألعاب على التلفاز', style: Txt.subhead.copyWith(color: Tokens.textSecondary)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Expanding glow rings around the logo on the splash screen.
+class _PulseRings extends StatelessWidget {
+  const _PulseRings({required this.controller, required this.child});
+
+  final AnimationController controller;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final t = Curves.easeOut.transform(controller.value);
+        return SizedBox(
+          width: 160,
+          height: 160,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 96 + t * 54,
+                height: 96 + t * 54,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Tokens.accent.withValues(alpha: (1 - t) * 0.45), width: 1.5),
+                ),
+              ),
+              child,
+            ],
+          ),
+        );
+      },
+    );
+  }
 }

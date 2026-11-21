@@ -9,8 +9,7 @@ import 'main.dart';
 import 'tv_install.dart';
 import 'ui.dart';
 
-/// TV uygulamasını telefondan kurma sihirbazı: marka → TV'yi bul → geliştirici modu adımları (her ekranda tek iş)
-/// → kurulum → TV'de aç. Kurulum Android tarafında yapılır (tvinstall/); bu sayfa yalnız yol gösterir.
+/// TV app installer wizard from phone: brand -> find TV -> developer steps -> install -> launch.
 class TvInstallPage extends StatefulWidget {
   const TvInstallPage({super.key});
 
@@ -20,18 +19,18 @@ class TvInstallPage extends StatefulWidget {
 
 enum _Step { brand, samsung, find, guide, install, done }
 
-/// Geliştirici modu adımlarından biri. [check]: adım yapılınca TV'de açılan port (canlı denetim).
+/// Single developer-mode step with optional live port check.
 class _GuideStep {
   const _GuideStep(this.title, this.body, {this.different, this.check = _Check.none, this.copy});
 
   final String title;
   final String body;
 
-  /// "Menü farklı görünüyorsa" açıklaması.
+  /// Alternative menu path if the TV UI differs.
   final String? different;
   final _Check check;
 
-  /// Kopyalanabilecek yazı (ör. web adresi).
+  /// Copyable string such as a URL.
   final String? copy;
 }
 
@@ -39,70 +38,58 @@ enum _Check { none, ready, keyServer }
 
 const _androidSteps = [
   _GuideStep(
-    'TV\'de Ayarlar\'ı aç',
-    'TV kumandasındaki dişli (Ayarlar) tuşuna bas. Kumandada yoksa ana ekranın sağ üstündeki dişli simgesini seç.',
-    different: 'Google TV\'de (yeni Sony, TCL, Philips, Xiaomi modelleri) sağ üstteki profil resmini ya da dişliyi seç, '
-        'sonra "Ayarlar"a gir.',
+    'افتح الإعدادات في التلفاز',
+    'اضغط زر الإعدادات (الترس) في ريموت التلفاز. إذا لم يكن موجوداً، اختر أيقونة الترس أعلى يمين الشاشة الرئيسية.',
+    different: 'في Google TV (موديلات Sony و TCL و Philips و Xiaomi الحديثة) اختر صورة الملف الشخصي أو الترس أعلى اليمين ثم ادخل "الإعدادات".',
   ),
   _GuideStep(
-    '"Hakkında" ekranına gir',
-    'Android TV: Ayarlar › Cihaz Tercihleri › Hakkında.\nGoogle TV: Ayarlar › Sistem › Hakkında.',
-    different: 'Philips: Ayarlar › Android Ayarları › Cihaz Tercihleri › Hakkında.\n'
-        'Sony: Ayarlar › Sistem › Hakkında (eski modellerde Cihaz Tercihleri › Hakkında).\n'
-        'TCL ve Xiaomi: Ayarlar › Sistem › Hakkında ya da Cihaz Tercihleri › Hakkında.\n'
-        'Bulamazsan ayarlarda arama varsa "Hakkında" yaz.',
+    'ادخل إلى شاشة "حول"',
+    'في Android TV: الإعدادات › تفضيلات الجهاز › حول.\nفي Google TV: الإعدادات › النظام › حول.',
+    different: 'في Philips: الإعدادات › إعدادات Android › تفضيلات الجهاز › حول.\n'
+        'في Sony: الإعدادات › النظام › حول (في الموديلات القديمة: تفضيلات الجهاز › حول).\n'
+        'في TCL و Xiaomi: الإعدادات › النظام › حول أو تفضيلات الجهاز › حول.\n'
+        'إذا كان هناك بحث في الإعدادات فاكتب "حول".',
   ),
   _GuideStep(
-    'Yapı satırına 7 kez bas',
-    'Listenin altındaki "Android TV OS yapısı" satırını seç ve kumandanın Tamam tuşuna art arda 7 kez bas. '
-        '"Artık bir geliştiricisiniz" yazısı çıkar.',
-    different: 'Satırın adı modele göre "Yapı numarası", "Derleme" ya da "Build" olabilir. TV PIN isterse TV\'nin kilit '
-        'PIN\'ini gir. "Zaten geliştiricisiniz" yazıyorsa bu adım tamam.',
+    'اضغط على رقم الإصدار 7 مرات',
+    'اختر سطر "إصدار نظام Android TV" أسفل القائمة واضغط زر الموافق في الريموت 7 مرات متتالية حتى تظهر رسالة "أنت الآن مطوّر".',
+    different: 'قد يظهر السطر باسم "رقم الإصدار" أو "Build number" حسب الطراز. إذا طلب التلفاز رمز PIN أدخل رمز القفل. إذا ظهر "أنت مطوّر بالفعل" فهذه الخطوة مكتملة.',
   ),
   _GuideStep(
-    'Geliştirici seçenekleri\'ni aç',
-    'Geri tuşuyla bir ekran geri dön. Android TV\'de Cihaz Tercihleri, Google TV\'de Sistem altında yeni bir '
-        '"Geliştirici seçenekleri" satırı belirdi; ona gir.',
-    different: 'Satırı göremiyorsan Ayarlar\'dan tamamen çıkıp yeniden gir. Hâlâ yoksa önceki adımda 7 kez basmayı yinele.',
+    'افتح "خيارات المطوّر"',
+    'ارجع خطوة واحدة للخلف؛ سيظهر خيار "خيارات المطوّر" ضمن تفضيلات الجهاز أو النظام، ادخل إليه.',
+    different: 'إذا لم يظهر، اخرج من الإعدادات بالكامل ثم عد إليها، أو كرر الضغط 7 مرات في الخطوة السابقة.',
   ),
   _GuideStep(
-    '"USB hata ayıklama"yı aç',
-    'Geliştirici seçenekleri listesinde "USB hata ayıklama"yı bul ve aç; çıkan uyarıda "Tamam"ı seç. Listede '
-        '"Ağ üzerinden hata ayıklama" ya da "ADB ağ hata ayıklama" varsa onu da aç.\n\nTV açıldığında burası kendiliğinden yeşile döner.',
-    different: 'Seçeneğin adı "Hata ayıklama (ADB)" ya da İngilizce "USB debugging" olabilir. Yalnız "Kablosuz hata ayıklama" '
-        'olup eşleştirme kodu isteyen modeller (ör. Google TV Streamer) telefondan henüz kurulamıyor; bunlarda '
-        'Rehber\'deki USB bellek yolunu kullan.',
+    'فعّل "تصحيح أخطاء USB"',
+    'ابحث عن "تصحيح أخطاء USB" داخل خيارات المطوّر وفعّله، ثم اضغط "موافق" في رسالة التنبيه. إذا وجدت "تصحيح الأخطاء عبر الشبكة" أو "ADB debugging" ففعّله أيضاً.\n\nعند تفعيله سيتحول المؤشر هنا إلى الأخضر تلقائياً.',
+    different: 'قد يظهر الخيار باسم "تصحيح أخطاء ADB" أو "USB debugging". الأجهزة التي توفر "Wireless debugging" برمز إقران فقط لا تدعم التثبيت المباشر من الهاتف حالياً؛ استخدم طريقة USB من الدليل.',
     check: _Check.ready,
   ),
 ];
 
 const _lgSteps = [
   _GuideStep(
-    'Ücretsiz LG geliştirici hesabı aç',
-    'Telefonun tarayıcısında aşağıdaki adrese gir, sağ üstten "SIGN IN", sonra "Create Account" ile ücretsiz hesap aç. '
-        'E-postanı ve şifreni bir sonraki adımda TV\'de yazacaksın.',
-    different: 'LG hesabın zaten varsa (ör. LG ThinQ) aynı e-posta ve şifreyle giriş yapabilirsin; bu adımı geç.',
+    'أنشئ حساب مطوّر LG مجاني',
+    'افتح الرابط أدناه في متصفح الهاتف، واضغط "SIGN IN" ثم "Create Account" لإنشاء حساب مجاني واستخدام بريده وكلمة مروره في الخطوة التالية.',
+    different: 'إذا كان لديك حساب LG مسبقاً (مثل LG ThinQ) يمكنك تسجيل الدخول بنفس البريد وكلمة المرور وتجاوز هذه الخطوة.',
     copy: 'https://webostv.developer.lge.com',
   ),
   _GuideStep(
-    'TV\'ye "Developer Mode" uygulamasını kur',
-    'TV\'de LG Content Store\'u (Uygulamalar) aç, arama kutusuna "Developer Mode" yaz ve uygulamayı yükle.',
-    different: 'Mağaza açılmıyorsa TV internete bağlı mı kontrol et. Eski modellerde mağazanın adı "LG Store" ya da '
-        '"Uygulamalar"dır. Uygulama ekranda İngilizce görünür.',
+    'ثبّت تطبيق "Developer Mode" على التلفاز',
+    'افتح متجر LG Content Store في التلفاز، وابحث عن "Developer Mode" ثم ثبّته.',
+    different: 'إذا لم يفتح المتجر تأكد من اتصال التلفاز بالإنترنت. قد يظهر المتجر باسم "LG Store" أو "التطبيقات"، وتظهر واجهة التطبيق بالإنجليزية.',
   ),
   _GuideStep(
-    'Giriş yap ve "Dev Mode Status"u aç',
-    'Developer Mode uygulamasını aç, LG hesabının e-postası ve şifresiyle giriş yap. "Dev Mode Status" anahtarını aç. '
-        'TV kendiliğinden yeniden başlar; açılmasını bekle.\n\nGeliştirici modu açıldığında burası kendiliğinden yeşile döner.',
-    different: '"Dev Mode Status" gri ve seçilemiyorsa önce giriş yapılmamıştır. Giriş "Login failed" diyorsa hesabının '
-        'e-postasını doğruladığından emin ol.',
+    'سجّل الدخول وفعّل "Dev Mode Status"',
+    'افتح تطبيق Developer Mode وسجّل الدخول بحساب LG، ثم فعّل مفتاح "Dev Mode Status". سيعيد التلفاز التشغيل تلقائياً، انتظر حتى يكتمل الإقلاع.\n\nسيتحول المؤشر هنا إلى الأخضر تلقائياً عند تفعيل وضع المطوّر.',
+    different: 'إذا كان المفتاح غير نشط فتأكد من تسجيل الدخول أولاً. إذا ظهرت رسالة "Login failed" فتأكد من تأكيد البريد الإلكتروني للحساب.',
     check: _Check.ready,
   ),
   _GuideStep(
-    '"Key Server"ı aç',
-    'TV açıldıktan sonra Developer Mode uygulamasını yeniden aç ve "Key Server" anahtarını aç. Uygulamayı ekranda bırak; '
-        'kapatırsan Key Server da kapanır.\n\nKey Server açıldığında burası kendiliğinden yeşile döner.',
-    different: 'Ekranın sol altında 6 karakterlik "Passphrase" görünür; bir sonraki adımda onu yazacaksın.',
+    'فعّل "Key Server"',
+    'بعد إعادة تشغيل التلفاز افتح Developer Mode مرة أخرى وفعّل "Key Server". اترك التطبيق مفتوحاً على الشاشة؛ إغلاقه يوقف Key Server.\n\nسيتحول المؤشر هنا إلى الأخضر تلقائياً عند تشغيله.',
+    different: 'سيظهر رمز "Passphrase" المكوّن من 6 أحرف أسفل يسار الشاشة؛ ستحتاجه في الخطوة التالية.',
     check: _Check.keyServer,
   ),
 ];
@@ -164,13 +151,12 @@ class _TvInstallPageState extends State<TvInstallPage> {
 
   List<_GuideStep> get guideSteps => switch (kind) {
         TvKind.android => _androidSteps,
-        // Anahtarı kayıtlı TV'de Key Server adımı gerekmez.
+        // Key Server step is skipped when the LG key is already saved.
         TvKind.lg => check?.hasKey == true ? _lgSteps.sublist(0, 3) : _lgSteps,
         _ => const [],
       };
 
-  // ------------------------------------------------------------------------------------------- gezinme
-
+  // ------------------------------------------------------------------------------------------- Navigation
   void go(_Step next) {
     poll?.cancel();
     setState(() {
@@ -194,7 +180,7 @@ class _TvInstallPageState extends State<TvInstallPage> {
     go(value == TvKind.samsung ? _Step.samsung : _Step.find);
   }
 
-  /// Kayıtlı TV'ye doğrudan kurulum (güncelleme ya da yeniden kurulum).
+  /// Installs or updates directly on a previously saved TV.
   Future<void> reinstallSaved(SavedTv tv) async {
     setState(() {
       kind = tv.kind;
@@ -239,8 +225,7 @@ class _TvInstallPageState extends State<TvInstallPage> {
     }
   }
 
-  // ------------------------------------------------------------------------------------------- arama
-
+  // ------------------------------------------------------------------------------------------- Discovery
   Future<void> search() async {
     final current = kind;
     if (current == null || searching) return;
@@ -261,7 +246,7 @@ class _TvInstallPageState extends State<TvInstallPage> {
     final address = await TvBridge.normalize(manualController.text);
     if (!mounted) return;
     if (address == null) {
-      setState(() => manualError = 'Bu bir IP adresine benzemiyor. Örnek: 192.168.1.40');
+      setState(() => manualError = 'عنوان IP غير صالح. مثال: 192.168.1.40');
       return;
     }
     FocusScope.of(context).unfocus();
@@ -278,17 +263,16 @@ class _TvInstallPageState extends State<TvInstallPage> {
     final status = await TvBridge.check(kind!, address);
     if (!mounted) return;
     setState(() => check = status);
-    // Geliştirici modu zaten açıksa adımlar atlanır.
+    // Skip guide steps if developer mode is already enabled.
     if (status.ready && (kind == TvKind.android || status.hasKey)) {
       go(_Step.install);
     } else {
-      if (status.ready && kind == TvKind.lg) guideIndex = 3; // yalnız Key Server kaldı
+      if (status.ready && kind == TvKind.lg) guideIndex = 3; // Only Key Server remains.
       go(_Step.guide);
     }
   }
 
-  // ------------------------------------------------------------------------------------------- canlı denetim
-
+  // ------------------------------------------------------------------------------------------- Live check
   void startPolling() {
     poll?.cancel();
     final current = guideSteps.elementAtOrNull(guideIndex);
@@ -304,7 +288,7 @@ class _TvInstallPageState extends State<TvInstallPage> {
     try {
       var address = host;
       if (address == null && current == TvKind.android) {
-        // TV hata ayıklama açılmadan ağda görünmez: açılınca burada bulunur.
+        // Android TV becomes discoverable once debugging is enabled.
         final list = await TvBridge.find(current);
         if (list.isNotEmpty) {
           address = list.first.host;
@@ -334,8 +318,7 @@ class _TvInstallPageState extends State<TvInstallPage> {
     }
   }
 
-  // ------------------------------------------------------------------------------------------- kurulum
-
+  // ------------------------------------------------------------------------------------------- Install
   bool get needsPassphrase => kind == TvKind.lg && check?.hasKey != true;
 
   Future<void> install() async {
@@ -344,7 +327,7 @@ class _TvInstallPageState extends State<TvInstallPage> {
     if (current == null || address == null || installing) return;
     final pass = passController.text.trim();
     if (current == TvKind.lg && needsPassphrase && pass.isEmpty) {
-      setState(() => result = const TvInstallResult(ok: false, error: 'WRONG_PASSPHRASE', detail: 'parola boş'));
+      setState(() => result = const TvInstallResult(ok: false, error: 'WRONG_PASSPHRASE', detail: 'الرمز فارغ'));
       return;
     }
     FocusScope.of(context).unfocus();
@@ -359,14 +342,13 @@ class _TvInstallPageState extends State<TvInstallPage> {
       installing = false;
       result = outcome;
       if (outcome.ok) step = _Step.done;
-      // Kayıtlı anahtar geçmediyse parola yeniden sorulur.
+      // Prompt for passphrase again if saved key was rejected.
       if (outcome.error == 'KEY_REFUSED' || outcome.error == 'WRONG_PASSPHRASE') check = TvCheck(check?.ready ?? false, check?.keyServer ?? false, false);
     });
     if (outcome.ok) TvBridge.saved().then((value) => mounted ? setState(() => saved = value) : null);
   }
 
-  // ------------------------------------------------------------------------------------------- görünüm
-
+  // ------------------------------------------------------------------------------------------- View
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -375,7 +357,7 @@ class _TvInstallPageState extends State<TvInstallPage> {
         if (!didPop) back();
       },
       child: GlassScaffold(
-        title: 'TV Uygulamasını Kur',
+        title: 'تثبيت تطبيق التلفاز',
         body: AnimatedSwitcher(
           duration: const Duration(milliseconds: 220),
           child: KeyedSubtree(
@@ -418,26 +400,27 @@ class _TvInstallPageState extends State<TvInstallPage> {
               ],
             ),
             const SizedBox(height: 12),
-            Text('ADIM ${index + 1} / 4', style: Txt.footnote.copyWith(color: Tokens.textSecondary, fontWeight: FontWeight.w600)),
+            Text('الخطوة ${index + 1} من 4', style: Txt.footnote.copyWith(color: Tokens.textSecondary, fontWeight: FontWeight.w600)),
             const SizedBox(height: 2),
             Text(title, style: Txt.title2),
           ],
         ),
       );
 
-  // ----- 1. marka
-
+  // ----- 1. Brand
   List<Widget> brandView() {
     final tv = saved;
     return [
-      progress(0, 'TV\'nin markası ne?'),
+      progress(0, 'ما نوع التلفاز؟'),
       Padding(
         padding: const EdgeInsets.fromLTRB(4, 0, 4, 6),
-        child: Text('Altyazıyı TV\'de gösteren GameTranslator uygulamasını telefondan TV\'ne kuracağız. Telefon ve TV aynı Wi-Fi '
-            'ağında olsun.', style: Txt.subhead.copyWith(color: Tokens.textSecondary)),
+        child: Text(
+          'سنثبّت تطبيق GameTranslator الخاص بالتلفاز من الهاتف لعرض الترجمة. تأكد أن الهاتف والتلفاز على نفس شبكة Wi-Fi.',
+          style: Txt.subhead.copyWith(color: Tokens.textSecondary),
+        ),
       ),
       if (tv != null) ...[
-        const GroupHeader('KAYITLI TV'),
+        const GroupHeader('تلفاز محفوظ'),
         Group(
           inset: 60,
           children: [
@@ -445,20 +428,20 @@ class _TvInstallPageState extends State<TvInstallPage> {
               icon: CupertinoIcons.tv_fill,
               iconColor: Tokens.success,
               title: tv.name.isEmpty ? tv.kind.title : tv.name,
-              subtitle: '${tv.host} · TV\'de ${tv.version ?? '?'} · telefonda ${bundled[tv.kind] ?? '?'}',
+              subtitle: '${tv.host} · على التلفاز ${tv.version ?? '?'} · في الهاتف ${bundled[tv.kind] ?? '?'}',
               trailing: tv.version != null && bundled[tv.kind] != null && _newer(bundled[tv.kind]!, tv.version!)
-                  ? const Pill(text: 'Güncelleme var', color: Tokens.warning)
+                  ? const Pill(text: 'يتوفر تحديث', color: Tokens.warning)
                   : null,
             ),
             Cell(
-              title: tv.version != null && bundled[tv.kind] != null && _newer(bundled[tv.kind]!, tv.version!) ? 'Güncelle' : 'Yeniden kur',
+              title: tv.version != null && bundled[tv.kind] != null && _newer(bundled[tv.kind]!, tv.version!) ? 'تحديث' : 'إعادة التثبيت',
               titleColor: Tokens.accent,
               onTap: () => reinstallSaved(tv),
             ),
           ],
         ),
       ],
-      const GroupHeader('MARKA'),
+      const GroupHeader('النظام / الماركة'),
       Group(
         inset: 60,
         children: [
@@ -466,7 +449,7 @@ class _TvInstallPageState extends State<TvInstallPage> {
             icon: CupertinoIcons.tv,
             iconColor: Tokens.success,
             title: 'Android TV / Google TV',
-            subtitle: 'TCL, Sony, Philips, Xiaomi, Vestel, Arçelik, Beko, Grundig… Ana ekranda Google Play ya da "Google TV" yazar.',
+            subtitle: 'TCL و Sony و Philips و Xiaomi وغيرها من شاشات Android TV / Google TV.',
             chevron: true,
             onTap: () => chooseBrand(TvKind.android),
           ),
@@ -474,7 +457,7 @@ class _TvInstallPageState extends State<TvInstallPage> {
             icon: CupertinoIcons.tv,
             iconColor: Tokens.danger,
             title: 'LG',
-            subtitle: 'webOS. Ana ekranda "LG Content Store" ve alt şeritte renkli uygulama kartları bulunur.',
+            subtitle: 'نظام webOS. يحتوي على LG Content Store وشريط التطبيقات في الأسفل.',
             chevron: true,
             onTap: () => chooseBrand(TvKind.lg),
           ),
@@ -482,88 +465,86 @@ class _TvInstallPageState extends State<TvInstallPage> {
             icon: CupertinoIcons.tv,
             iconColor: Tokens.accent,
             title: 'Samsung',
-            subtitle: 'Tizen, 2019 ve sonrası. Ana ekranda "Samsung TV Plus" ve "Smart Hub" bulunur.',
+            subtitle: 'نظام Tizen (2019 فأحدث). يحتوي على Samsung TV Plus و Smart Hub.',
             chevron: true,
             onTap: () => chooseBrand(TvKind.samsung),
           ),
         ],
       ),
-      const GroupFooter('Emin değil misin? TV\'nin Ayarlar › Destek (ya da Hakkında) ekranında model ve işletim sistemi yazar. '
-          'Vestel/Arçelik/Beko/Grundig\'in Linux modelleri, Philips Saphi ve Titan OS desteklenmiyor.'),
+      const GroupFooter(
+        'إذا لم تكن متأكداً، راجع الطراز ونظام التشغيل من إعدادات التلفاز › حول. '
+        'بعض الأنظمة المحدودة مثل Philips Saphi و Titan OS غير مدعومة.',
+      ),
     ];
   }
 
-  // ----- Samsung: şimdilik bilgisayardan
-
+  // ----- Samsung: currently via desktop
   List<Widget> samsungView() => [
-        progress(0, 'Samsung: bilgisayardan kur'),
+        progress(0, 'Samsung: التثبيت من الحاسوب حالياً'),
         const Notice(
           icon: CupertinoIcons.desktopcomputer,
           color: Tokens.warning,
-          title: 'Samsung TV\'ye kurulum şimdilik bilgisayardan',
-          text: 'Samsung, uygulamanın her TV için Samsung hesabıyla ayrıca imzalanmasını istiyor. Telefondan kurulum henüz hazır '
-              'değil; bilgisayardaki GameTranslator bunu kendisi yapar. Kurulum bir kez yapılır, sonra bilgisayar gerekmez.',
+          title: 'التثبيت من الهاتف غير متاح لـ Samsung حالياً',
+          text: 'يتطلب نظام Tizen توقيع الحزمة بحساب Samsung لكل شاشة، ويتولى تطبيق الحاسوب ذلك حالياً. بعد إتمام التثبيت مرة واحدة لن تحتاج الحاسوب لاحقاً.',
         ),
         const SizedBox(height: 14),
         SectionCard(
           icon: CupertinoIcons.list_number,
-          title: 'Kısaca adımlar',
+          title: 'ملخص الخطوات',
           children: const [
-            _Numbered(1, 'TV\'de Uygulamalar ekranını aç, kumandayla 1 2 3 4 5 tuşlarına bas.'),
-            _Numbered(2, '"Developer mode"u "On" yap, "Host PC IP" alanına BİLGİSAYARIN adresini yaz, OK\'e bas.'),
-            _Numbered(3, 'TV\'yi güç tuşunu basılı tutarak tam kapatıp aç.'),
-            _Numbered(4, 'Bilgisayarda GameTranslator\'ın TV adımında Samsung TV\'ni seç ve açılan sayfada Samsung hesabınla giriş yap.'),
+            _Numbered(1, 'افتح شاشة التطبيقات في التلفاز واضغط الأزرار 1 2 3 4 5 من الريموت.'),
+            _Numbered(2, 'فعّل "Developer mode" وأدخل عنوان IP الخاص بالحاسوب في "Host PC IP" ثم اضغط OK.'),
+            _Numbered(3, 'أعد تشغيل التلفاز بالضغط المطوّل على زر التشغيل.'),
+            _Numbered(4, 'من تطبيق GameTranslator على الحاسوب اختر شاشة Samsung وسجّل الدخول بحساب Samsung.'),
           ],
         ),
         const SizedBox(height: 16),
         GlowButton(
           icon: CupertinoIcons.book_fill,
-          label: 'Rehberde ayrıntılı göster',
+          label: 'عرض التفاصيل في الدليل',
           onPressed: () => Navigator.of(context).push(appleRoute<void>((_) => const GuideChapterPage(index: 3))),
         ),
         const SizedBox(height: 10),
-        OutlinedButton(onPressed: () => go(_Step.brand), child: const Text('Başka marka seç')),
+        OutlinedButton(onPressed: () => go(_Step.brand), child: const Text('اختيار نظام آخر')),
       ];
 
-  // ----- 2. TV'yi bul
-
+  // ----- 2. Find TV
   List<Widget> findView() {
     final current = kind!;
     final android = current == TvKind.android;
     return [
-      progress(1, 'TV\'ni bul'),
+      progress(1, 'ابحث عن التلفاز'),
       Padding(
         padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
         child: Text(
           android
-              ? 'Ağda hata ayıklaması açık Android TV\'ler aranıyor. Hata ayıklamayı henüz açmadıysan TV burada görünmez; '
-                  'sorun değil, "Adımları göster" ile devam et.'
-              : 'Telefonla aynı ağdaki LG TV\'ler aranıyor. TV açık olsun.',
+              ? 'يتم البحث عن أجهزة Android TV المفعّل بها تصحيح الأخطاء على الشبكة. إذا لم يكن مفعّلاً بعد فاختر "عرض الخطوات" للمتابعة.'
+              : 'يتم البحث عن أجهزة LG TV المتصلة بنفس شبكة Wi-Fi. تأكد أن التلفاز يعمل.',
           style: Txt.subhead.copyWith(color: Tokens.textSecondary),
         ),
       ),
-      GroupHeader(searching ? 'ARANIYOR…' : 'BULUNAN TV\'LER'),
+      GroupHeader(searching ? 'جارٍ البحث…' : 'الأجهزة المكتشفة'),
       Group(
         inset: 60,
         children: [
           if (searching)
-            const Cell(title: 'Ağ taranıyor, birkaç saniye sürer…', trailing: CupertinoActivityIndicator())
+            const Cell(title: 'جارٍ فحص الشبكة…', trailing: CupertinoActivityIndicator())
           else if (found.isEmpty)
-            Cell(title: searched ? 'TV bulunamadı' : 'Henüz aranmadı', subtitle: searched ? 'Yenile\'ye dokun ya da adresi elle yaz.' : null),
+            Cell(title: searched ? 'لم يتم العثور على تلفاز' : 'لم يبدأ البحث بعد', subtitle: searched ? 'اضغط تحديث أو أدخل العنوان يدوياً.' : null),
           for (final tv in found)
             Cell(
               icon: CupertinoIcons.tv_fill,
               iconColor: tv.ready ? Tokens.success : Tokens.gray,
               title: tv.name,
               subtitle: tv.host,
-              trailing: tv.ready ? const Pill(text: 'مستعد', color: Tokens.success) : null,
+              trailing: tv.ready ? const Pill(text: 'جاهز', color: Tokens.success) : null,
               chevron: true,
               onTap: () => selectTv(tv.host, tv.name),
             ),
-          Cell(title: 'Yenile', titleColor: Tokens.accent, onTap: searching ? null : search),
+          Cell(title: 'تحديث البحث', titleColor: Tokens.accent, onTap: searching ? null : search),
         ],
       ),
-      const GroupHeader('ADRESİ ELLE YAZ'),
+      const GroupHeader('إدخال العنوان يدوياً'),
       Glass(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -572,23 +553,23 @@ class _TvInstallPageState extends State<TvInstallPage> {
             TextField(
               controller: manualController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(hintText: 'ör. 192.168.1.40', errorText: manualError),
+              decoration: InputDecoration(hintText: 'مثال: 192.168.1.40', errorText: manualError),
               onSubmitted: (_) => useManual(),
             ),
             const SizedBox(height: 10),
-            OutlinedButton(onPressed: useManual, child: const Text('Bu adresi kullan')),
+            OutlinedButton(onPressed: useManual, child: const Text('استخدام هذا العنوان')),
           ],
         ),
       ),
       GroupFooter(android
-          ? 'TV\'nin adresi: Ayarlar › Ağ ve İnternet › bağlı olduğun Wi-Fi ağının adı (Google TV: Ayarlar › Ağ ve İnternet). '
-              '${phone == null ? '' : 'Telefonun adresi $phone; TV\'ninki ilk üç bölümde aynı olmalı.'}'
-          : 'TV\'nin adresi: Ayarlar › Genel › Ağ › Wi-Fi Bağlantısı › Gelişmiş Wi-Fi Ayarları (modele göre Ayarlar › Ağ). '
-              '${phone == null ? '' : 'Telefonun adresi $phone; TV\'ninki ilk üç bölümde aynı olmalı.'}'),
+          ? 'عنوان التلفاز يظهر في الإعدادات › الشبكة والإنترنت ضمن تفاصيل شبكة Wi-Fi الحالية. '
+              '${phone == null ? '' : 'عنوان الهاتف $phone ويجب أن يتطابق مع التلفاز في أول ثلاث خانات.'}'
+          : 'عنوان التلفاز يظهر في الإعدادات › الشبكة › Wi-Fi. '
+              '${phone == null ? '' : 'عنوان الهاتف $phone ويجب أن يتطابق مع التلفاز في أول ثلاث خانات.'}'),
       if (android) ...[
         const SizedBox(height: 16),
         GlowButton(
-          label: 'Adımları göster',
+          label: 'عرض الخطوات',
           icon: CupertinoIcons.list_number,
           onPressed: () {
             setState(() => guideIndex = 0);
@@ -599,8 +580,7 @@ class _TvInstallPageState extends State<TvInstallPage> {
     ];
   }
 
-  // ----- 3. geliştirici modu
-
+  // ----- 3. Developer guide
   List<Widget> guideView() {
     final steps = guideSteps;
     final index = guideIndex.clamp(0, steps.length - 1);
@@ -608,7 +588,7 @@ class _TvInstallPageState extends State<TvInstallPage> {
     final done = stepDone(s);
     final waiting = s.check != _Check.none && !done;
     return [
-      progress(2, kind == TvKind.android ? 'Hata ayıklamayı aç' : 'Geliştirici modunu aç'),
+      progress(2, kind == TvKind.android ? 'تفعيل تصحيح الأخطاء' : 'تفعيل وضع المطوّر'),
       Glass(
         padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
         child: Column(
@@ -631,8 +611,8 @@ class _TvInstallPageState extends State<TvInstallPage> {
             ),
             const SizedBox(height: 4),
             Padding(
-              padding: const EdgeInsets.only(left: 46),
-              child: Text('${index + 1}. adım, toplam ${steps.length}', style: Txt.footnote.copyWith(color: Tokens.textSecondary)),
+              padding: const EdgeInsets.only(right: 46),
+              child: Text('الخطوة ${index + 1} من ${steps.length}', style: Txt.footnote.copyWith(color: Tokens.textSecondary)),
             ),
             const SizedBox(height: 14),
             Text(s.body, style: Txt.callout),
@@ -645,11 +625,11 @@ class _TvInstallPageState extends State<TvInstallPage> {
                   children: [
                     Expanded(child: SelectableText(s.copy!, style: Txt.subhead.copyWith(fontWeight: FontWeight.w600))),
                     IconButton(
-                      tooltip: 'Kopyala',
+                      tooltip: 'نسخ',
                       icon: const Icon(CupertinoIcons.doc_on_clipboard, color: Tokens.accent),
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: s.copy!));
-                        toast(context, 'Adres kopyalandı');
+                        toast(context, 'تم نسخ الرابط');
                       },
                     ),
                   ],
@@ -666,7 +646,7 @@ class _TvInstallPageState extends State<TvInstallPage> {
                 icon: CupertinoIcons.checkmark_circle_fill,
                 color: Tokens.success,
                 compact: true,
-                text: s.check == _Check.keyServer ? 'Key Server açık. Devam edebilirsin.' : 'TV hazır. Devam edebilirsin.',
+                text: s.check == _Check.keyServer ? 'Key Server مفعّل. يمكنك المتابعة.' : 'التلفاز جاهز. يمكنك المتابعة.',
               )
             : Glass(
                 radius: 18,
@@ -677,7 +657,7 @@ class _TvInstallPageState extends State<TvInstallPage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        host == null ? 'TV ağda aranıyor…' : 'TV bekleniyor ($host)…',
+                        host == null ? 'جارٍ البحث عن التلفاز في الشبكة…' : 'بانتظار التلفاز ($host)…',
                         style: Txt.subhead.copyWith(color: Tokens.textSecondary),
                       ),
                     ),
@@ -687,37 +667,35 @@ class _TvInstallPageState extends State<TvInstallPage> {
       ],
       if (s.different != null) ...[
         const SizedBox(height: 12),
-        _Expandable(title: 'Menü farklı görünüyorsa', text: s.different!),
+        _Expandable(title: 'إذا كانت القائمة مختلفة', text: s.different!),
       ],
       const SizedBox(height: 18),
       GlowButton(
-        label: waiting ? 'Bunu yaptım' : (index + 1 < steps.length ? 'Bunu yaptım' : 'Kuruluma geç'),
+        label: waiting ? 'تم التنفيذ' : (index + 1 < steps.length ? 'تم التنفيذ' : 'الانتقال للتثبيت'),
         icon: CupertinoIcons.checkmark_alt,
-        // Canlı denetimde TV henüz görünmüyorsa yine de geçilebilir: bazı ağlar denetimi engeller, kurulum kendisi dener.
         onPressed: (s.check == _Check.ready && host == null && waiting) ? null : nextGuide,
       ),
       if (s.check == _Check.ready && host == null && waiting)
-        const GroupFooter('TV ağda görünene kadar bekleniyor. Görünmüyorsa geri dönüp TV\'nin adresini elle yaz.'),
+        const GroupFooter('بانتظار ظهور التلفاز على الشبكة. إذا لم يظهر ارجع وأدخل عنوان IP يدوياً.'),
     ];
   }
 
-  // ----- 4. kurulum
-
+  // ----- 4. Install
   List<Widget> installView() {
     final current = kind!;
     final failure = result != null && !result!.ok ? result : null;
     final text = failure == null ? null : tvErrorText(failure.error, current);
     return [
-      progress(3, 'Kur'),
+      progress(3, 'التثبيت'),
       Group(
         inset: 60,
         children: [
           Cell(icon: CupertinoIcons.tv_fill, iconColor: Tokens.purple, title: tvName.isEmpty ? current.title : tvName, subtitle: host),
-          Cell(icon: CupertinoIcons.cube_box_fill, iconColor: Tokens.indigo, title: 'Kurulacak sürüm', value: bundled[current] ?? '?'),
+          Cell(icon: CupertinoIcons.cube_box_fill, iconColor: Tokens.indigo, title: 'الإصدار المرفق', value: bundled[current] ?? '?'),
         ],
       ),
       if (current == TvKind.lg && needsPassphrase) ...[
-        const GroupHeader('TV EKRANINDAKİ PAROLA'),
+        const GroupHeader('رمز المرور الظاهر على التلفاز'),
         Glass(
           padding: const EdgeInsets.all(14),
           child: Column(
@@ -731,23 +709,21 @@ class _TvInstallPageState extends State<TvInstallPage> {
                 maxLength: 10,
                 style: Txt.title2.copyWith(letterSpacing: 6),
                 textAlign: TextAlign.center,
-                decoration: const InputDecoration(hintText: 'ör. 2FEEB2', counterText: ''),
+                decoration: const InputDecoration(hintText: 'مثال: 2FEEB2', counterText: ''),
                 onSubmitted: (_) => install(),
               ),
             ],
           ),
         ),
-        const GroupFooter('Developer Mode uygulamasında Key Server açıkken ekranın sol altında "Passphrase" olarak görünen 6 karakter. '
-            'Yalnız bu ilk kurulumda sorulur.'),
+        const GroupFooter('رمز "Passphrase" المكوّن من 6 أحرف أسفل يسار شاشة Developer Mode عند تفعيل Key Server. يُطلب في الإعداد الأول فقط.'),
       ],
       if (current == TvKind.android && !installing && failure == null)
         const Padding(
           padding: EdgeInsets.only(top: 14),
           child: Notice(
             icon: CupertinoIcons.hand_raised_fill,
-            title: 'TV\'de bir soru çıkacak',
-            text: '"USB hata ayıklamaya izin verilsin mi?" sorusunda "Bu bilgisayardan her zaman izin ver"i işaretle ve "İzin ver"i seç. '
-                'Soru yalnız ilk kurulumda çıkar.',
+            title: 'ستظهر رسالة سماح على التلفاز',
+            text: 'عند ظهور رسالة السماح بتصحيح الأخطاء على التلفاز، اختر "السماح دائماً من هذا الجهاز" ثم "سماح". تظهر غالباً في التثبيت الأول.',
           ),
         ),
       if (installing) ...[
@@ -776,29 +752,28 @@ class _TvInstallPageState extends State<TvInstallPage> {
           const Notice(
             icon: CupertinoIcons.tv,
             color: Tokens.warning,
-            title: 'Şimdi TV\'ye bak',
-            text: 'TV "USB hata ayıklamaya izin verilsin mi?" diye soruyor. "Bu bilgisayardan her zaman izin ver"i işaretle ve '
-                '"İzin ver"i seç. Kurulum sonra kendiliğinden sürer.',
+            title: 'انظر إلى شاشة التلفاز الآن',
+            text: 'يطلب التلفاز تأكيد السماح بتصحيح الأخطاء. حدد "السماح دائماً من هذا الجهاز" واختر "سماح" ليستمر التثبيت تلقائياً.',
           ),
         ],
         const SizedBox(height: 10),
-        const GroupFooter('Telefonun ekranını açık tut. Kurulum genellikle bir dakikadan kısa sürer.'),
+        const GroupFooter('أبقِ شاشة الهاتف مضاءة ومتصلة بالشبكة. يستغرق التثبيت أقل من دقيقة غالباً.'),
       ],
       if (failure != null) ...[
         const SizedBox(height: 14),
         Notice(icon: CupertinoIcons.exclamationmark_triangle_fill, color: Tokens.danger, title: text!.title, text: text.fix),
         if ((failure.detail ?? '').isNotEmpty && failure.error != 'CANCELLED') ...[
           const SizedBox(height: 10),
-          _Expandable(title: 'TV\'nin söylediği', text: failure.detail!),
+          _Expandable(title: 'تفاصيل الخطأ من التلفاز', text: failure.detail!),
         ],
       ],
       const SizedBox(height: 18),
       if (installing)
-        OutlinedButton(onPressed: TvBridge.cancel, child: const Text('Durdur'))
+        OutlinedButton(onPressed: TvBridge.cancel, child: const Text('إلغاء'))
       else ...[
         GlowButton(
           icon: failure == null ? CupertinoIcons.arrow_down_circle_fill : CupertinoIcons.arrow_clockwise,
-          label: failure == null ? 'TV\'ye kur' : 'Tekrar dene',
+          label: failure == null ? 'تثبيت على التلفاز' : 'إعادة المحاولة',
           onPressed: install,
         ),
         if (failure != null) ...[
@@ -808,52 +783,50 @@ class _TvInstallPageState extends State<TvInstallPage> {
               setState(() => guideIndex = failure.error == 'KEY_SERVER_OFF' ? guideSteps.length - 1 : 0);
               go(_Step.guide);
             },
-            child: const Text('Adımlara dön'),
+            child: const Text('العودة للخطوات'),
           ),
         ],
       ],
     ];
   }
 
-  // ----- 5. tamam
-
+  // ----- 5. Done
   List<Widget> doneView() {
     final r = result!;
     return [
       const SizedBox(height: 24),
       const Center(child: Icon(CupertinoIcons.checkmark_seal_fill, size: 84, color: Tokens.success)),
       const SizedBox(height: 16),
-      Center(child: Text(r.installed ? 'TV uygulaması kuruldu' : 'TV uygulaması zaten güncel', style: Txt.title2, textAlign: TextAlign.center)),
+      Center(child: Text(r.installed ? 'تم تثبيت تطبيق التلفاز' : 'تطبيق التلفاز محدّث بالفعل', style: Txt.title2, textAlign: TextAlign.center)),
       const SizedBox(height: 6),
-      Center(child: Text('Sürüm ${r.version ?? '?'}', style: Txt.subhead.copyWith(color: Tokens.textSecondary))),
+      Center(child: Text('الإصدار ${r.version ?? '?'}', style: Txt.subhead.copyWith(color: Tokens.textSecondary))),
       const SizedBox(height: 22),
       Notice(
         icon: CupertinoIcons.tv_fill,
         color: r.launched ? Tokens.success : Tokens.accent,
-        title: r.launched ? 'TV\'de GameTranslator açıldı' : 'افتح GameTranslator\'على التلفاز\'',
+        title: r.launched ? 'تم تشغيل GameTranslator على التلفاز' : 'افتح GameTranslator على التلفاز',
         text: r.launched
-            ? 'Çeviriyi telefonda başlattığında TV uygulaması telefonu ağda kendisi bulur.'
-            : 'TV\'nin uygulamalar listesinde GameTranslator\'ı bul ve aç. Çeviriyi başlattığında telefonu kendisi bulur.',
+            ? 'عند بدء الترجمة من الهاتف سيتصل تطبيق التلفاز بالهاتف تلقائياً عبر الشبكة.'
+            : 'افتح GameTranslator من قائمة التطبيقات على التلفاز، وعند بدء الترجمة من الهاتف سيتصل به تلقائياً.',
       ),
       if (kind == TvKind.lg) ...[
         const SizedBox(height: 12),
         Notice(
           icon: CupertinoIcons.clock_fill,
           color: Tokens.warning,
-          title: 'LG geliştirici modu süresi',
-          text: '${r.hoursLeft != null ? 'Kalan süre: ${r.hoursLeft} saat. ' : ''}Süre dolarsa TV uygulaması silinir. Uzun süre '
-              'kullanmayacaksan TV\'deki Developer Mode uygulamasında "EXTEND"e bas; bu sayfadan yeniden kurmak da süreyi uzatır.',
+          title: 'مدة جلسة وضع المطوّر في LG',
+          text: '${r.hoursLeft != null ? 'الوقت المتبقي: ${r.hoursLeft} ساعة. ' : ''}بعد انتهاء المدة يُزال التطبيق تلقائياً. يمكنك الضغط على "EXTEND" في تطبيق Developer Mode أو إعادة التثبيت من هنا لتجديد المدة.',
         ),
       ],
       if (kind == TvKind.android) ...[
         const SizedBox(height: 12),
         const Notice(
           icon: CupertinoIcons.info_circle_fill,
-          text: 'İstersen artık TV\'de USB hata ayıklamayı kapatabilirsin. Yeni bir sürümü kurmak için yeniden açman gerekir.',
+          text: 'يمكنك إيقاف تصحيح الأخطاء بعد الانتهاء إذا رغبت، وستحتاج لتفعيله مجدداً عند تثبيت تحديث لاحق.',
         ),
       ],
       const SizedBox(height: 22),
-      GlowButton(label: 'Bitti', onPressed: () => Navigator.of(context).pop()),
+      GlowButton(label: 'تم', onPressed: () => Navigator.of(context).pop()),
     ];
   }
 }
@@ -894,7 +867,7 @@ class _Numbered extends StatelessWidget {
       );
 }
 
-/// Dokununca açılan ek açıklama.
+/// Expandable explanation card.
 class _Expandable extends StatefulWidget {
   const _Expandable({required this.title, required this.text});
 
