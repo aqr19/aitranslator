@@ -583,3 +583,35 @@ class _Table extends StatelessWidget {
         ),
       );
 }
+
+class _Tip extends StatelessWidget {
+  const _Tip(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Tokens.inset,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Tokens.border),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 1, left: 10),
+              child: Icon(CupertinoIcons.lightbulb_fill, size: 17, color: Tokens.accent),
+            ),
+            Expanded(
+              child: Text(
+                text,
+                style: Txt.footnote.copyWith(color: Tokens.textSecondary, height: 1.45),
+              ),
+            ),
+          ],
+        ),
+      );
+}
