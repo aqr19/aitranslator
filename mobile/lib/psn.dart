@@ -64,7 +64,7 @@ class PsnAccount {
     return accountIdFromDecimal(userId);
   }
 
-  static Future> _postToken(String code) async {
+  static Future<Map<String, dynamic>> _postToken(String code) async {
     final basicAuth = 'Basic ${base64Encode(utf8.encode('$_npClientId:$_npClientSecret'))}';
     final http.Response token;
     try {
